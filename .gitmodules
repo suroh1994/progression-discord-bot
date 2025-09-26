@@ -1,0 +1,3 @@
+[submodule "Magic-Booster-Pack-Generator"]
+	path = Magic-Booster-Pack-Generator
+	url = git@github.com:joshbirnholz/Magic-Booster-Pack-Generator.git
