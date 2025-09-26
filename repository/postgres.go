@@ -104,7 +104,35 @@ func (p *postgresDataStore) GetCards(userID string) ([]Card, error) {
 	return cards, nil
 }
 
-type PlayerCardPool struct {
-	ID    string
-	Cards []Card
+func (p *postgresDataStore) GetPlayer(userID string) (Player, error) {
+	const errMsg = "failed to get player: %w"
+
+	var player Player
+	result := p.db.Table("player").First(&player, "id = ?", userID)
+	if result.Error != nil {
+		return player, fmt.Errorf(errMsg, result.Error)
+	}
+
+	return player, nil
+}
+
+func (p *postgresDataStore) UpdatePlayer(player Player) error {
+	const errMsg = "failed to update player: %w"
+
+	result := p.db.Table("player").Save(&player)
+	if result.Error != nil {
+		return fmt.Errorf(errMsg, result.Error)
+	}
+
+	return nil
+}
+
+func (p *postgresDataStore) StorePairings(pairings []Pairing) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p *postgresDataStore) UpdatePairing(userID string, wins, loses, draws int) error {
+	//TODO implement me
+	panic("implement me")
 }
