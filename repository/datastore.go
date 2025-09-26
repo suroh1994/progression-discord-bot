@@ -8,6 +8,7 @@ type DataStore interface {
 	StoreCards(userID string, cards []Card) error
 	GetPlayer(userID string) (Player, error)
 	UpdatePlayer(player Player) error
+	GetPairing(userID string) (Pairing, error)
 	StorePairings(pairings []Pairing) error
-	UpdatePairing(userID string, wins, loses, draws int) error
+	UpdatePairing(pairing Pairing) error
 }

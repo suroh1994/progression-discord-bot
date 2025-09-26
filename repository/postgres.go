@@ -127,12 +127,51 @@ func (p *postgresDataStore) UpdatePlayer(player Player) error {
 	return nil
 }
 
-func (p *postgresDataStore) StorePairings(pairings []Pairing) error {
-	//TODO implement me
-	panic("implement me")
+func (p *postgresDataStore) GetPairing(userID string) (Pairing, error) {
+	const errMsg = "failed to get pairing: %w"
+
+	var pairing Pairing
+	result := p.db.Table("pairing").
+		Where("player1 = ?", userID).
+		Or("player2 = ?", userID).
+		Find(&pairing)
+	if result.Error != nil {
+		return pairing, fmt.Errorf(errMsg, result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return pairing, ErrPairingNotFound
+	}
+
+	return pairing, nil
 }
 
-func (p *postgresDataStore) UpdatePairing(userID string, wins, loses, draws int) error {
-	//TODO implement me
-	panic("implement me")
+func (p *postgresDataStore) StorePairings(pairings []Pairing) error {
+	const errMsg = "failed to store pairings: %w"
+
+	result := p.db.Table("pairing").Create(&pairings)
+	if result.Error != nil {
+		return fmt.Errorf(errMsg, result.Error)
+	}
+
+	return nil
+}
+
+func (p *postgresDataStore) UpdatePairing(pairing Pairing) error {
+	const errMsg = "failed to update pairing: %w"
+
+	const query = `UPDATE pairing SET wins1 = ?, wins2 = ?, draws = ?
+               WHERE round = ? AND player1 = ? AND player2 = ?
+               AND wins1 = 0 AND wins2 = 0 AND draws = 0`
+
+	result := p.db.Exec(query, pairing.Wins1, pairing.Wins2, pairing.Draws, pairing.Round, pairing.Player1, pairing.Player2)
+	if result.Error != nil {
+		return fmt.Errorf(errMsg, result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf(errMsg, ErrPairingNotFound)
+	}
+
+	return nil
 }
