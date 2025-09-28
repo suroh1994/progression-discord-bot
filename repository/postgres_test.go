@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"log"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -10,10 +12,50 @@ import (
 
 // IMPORTANT: (re-)start the database with `make run-pgdb` before you run these tests
 
-func TestInsertCardPool(t *testing.T) {
-	dataStore := New("localhost", 5432, "postgres", "postgres", "progression")
+var dataStore DataStore
+
+func setupSuite() {
+	dataStore = NewPostgresDataStore("localhost", 5432, "postgres", "postgres", "progression")
 	err := dataStore.Connect()
-	assert.NoError(t, err)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func teardownSuite() {
+}
+
+func setupTest() {
+	pgDS, ok := dataStore.(*postgresDataStore)
+	if !ok {
+		log.Fatal("setup test fail")
+	}
+	if err := pgDS.db.Exec("TRUNCATE TABLE league;").Error; err != nil {
+		log.Fatal(err)
+	}
+	if err := pgDS.db.Exec("TRUNCATE TABLE player;").Error; err != nil {
+		log.Fatal(err)
+	}
+	if err := pgDS.db.Exec("TRUNCATE TABLE player_card_pool;").Error; err != nil {
+		log.Fatal(err)
+	}
+	if err := pgDS.db.Exec("TRUNCATE TABLE pairing;").Error; err != nil {
+		log.Fatal(err)
+	}
+}
+
+func teardownTest() {
+}
+
+func TestMain(m *testing.M) {
+	setupSuite()
+	code := m.Run()
+	teardownSuite()
+	os.Exit(code)
+}
+
+func TestInsertCardPool(t *testing.T) {
+	setupTest()
 
 	cards := []Card{
 		{
@@ -23,14 +65,13 @@ func TestInsertCardPool(t *testing.T) {
 	}
 	playerID := "test_player" + strconv.FormatInt(time.Now().UnixMilli(), 10)
 
-	err = dataStore.StoreCards(playerID, cards)
+	err := dataStore.StoreCards(playerID, cards)
 	assert.NoError(t, err, "failed to store cards")
+	teardownTest()
 }
 
 func TestGetCardPool(t *testing.T) {
-	dataStore := New("localhost", 5432, "postgres", "postgres", "progression")
-	err := dataStore.Connect()
-	assert.NoError(t, err)
+	setupTest()
 
 	cards := []Card{
 		{
@@ -48,19 +89,18 @@ func TestGetCardPool(t *testing.T) {
 	}
 	playerID := "test_player" + strconv.FormatInt(time.Now().UnixMilli(), 10)
 
-	err = dataStore.StoreCards(playerID, cards)
+	err := dataStore.StoreCards(playerID, cards)
 	assert.NoError(t, err, "failed to store cards")
 
 	storedCards, err := dataStore.GetCards(playerID)
 	assert.NoError(t, err, "failed to get cards")
 
 	assert.Len(t, storedCards, 2, "expected 2 different cards")
+	teardownTest()
 }
 
 func TestCardPoolDeduplicate(t *testing.T) {
-	dataStore := New("localhost", 5432, "postgres", "postgres", "progression")
-	err := dataStore.Connect()
-	assert.NoError(t, err)
+	setupTest()
 
 	cards := []Card{
 		{
@@ -74,19 +114,18 @@ func TestCardPoolDeduplicate(t *testing.T) {
 	}
 	playerID := "test_player" + strconv.FormatInt(time.Now().UnixMilli(), 10)
 
-	err = dataStore.StoreCards(playerID, cards)
+	err := dataStore.StoreCards(playerID, cards)
 	assert.NoError(t, err, "failed to store cards")
 
 	storedCards, err := dataStore.GetCards(playerID)
 	assert.NoError(t, err, "failed to get cards")
 
 	assert.Len(t, storedCards, 1, "expected 1 card")
+	teardownTest()
 }
 
 func TestInsertPlayer(t *testing.T) {
-	dataStore := New("localhost", 5432, "postgres", "postgres", "progression")
-	err := dataStore.Connect()
-	assert.NoError(t, err)
+	setupTest()
 
 	playerID := "test_player" + strconv.FormatInt(time.Now().UnixMilli(), 10)
 	player := Player{
@@ -95,14 +134,13 @@ func TestInsertPlayer(t *testing.T) {
 		WildPacks: 0,
 	}
 
-	err = dataStore.UpdatePlayer(player)
+	err := dataStore.UpdatePlayer(player)
 	assert.NoError(t, err, "failed to store player")
+	teardownTest()
 }
 
 func TestGetPlayer(t *testing.T) {
-	dataStore := New("localhost", 5432, "postgres", "postgres", "progression")
-	err := dataStore.Connect()
-	assert.NoError(t, err)
+	setupTest()
 
 	playerID := "test_player" + strconv.FormatInt(time.Now().UnixMilli(), 10)
 	player := Player{
@@ -111,18 +149,17 @@ func TestGetPlayer(t *testing.T) {
 		WildPacks: 23,
 	}
 
-	err = dataStore.UpdatePlayer(player)
+	err := dataStore.UpdatePlayer(player)
 	assert.NoError(t, err, "failed to store player")
 
 	storedPlayer, err := dataStore.GetPlayer(playerID)
 	assert.NoError(t, err, "failed to get player")
 	assert.Equal(t, player, storedPlayer, "player did not match")
+	teardownTest()
 }
 
 func TestUpdatePlayer(t *testing.T) {
-	dataStore := New("localhost", 5432, "postgres", "postgres", "progression")
-	err := dataStore.Connect()
-	assert.NoError(t, err)
+	setupTest()
 
 	playerID := "test_player" + strconv.FormatInt(time.Now().UnixMilli(), 10)
 	player := Player{
@@ -131,7 +168,7 @@ func TestUpdatePlayer(t *testing.T) {
 		WildPacks: 23,
 	}
 
-	err = dataStore.UpdatePlayer(player)
+	err := dataStore.UpdatePlayer(player)
 	assert.NoError(t, err, "failed to store player")
 
 	player.WildCards = 0
@@ -141,12 +178,11 @@ func TestUpdatePlayer(t *testing.T) {
 	storedPlayer, err := dataStore.GetPlayer(playerID)
 	assert.NoError(t, err, "failed to get player")
 	assert.Equal(t, player, storedPlayer, "player did not match")
+	teardownTest()
 }
 
 func TestInsertPairing(t *testing.T) {
-	dataStore := New("localhost", 5432, "postgres", "postgres", "progression")
-	err := dataStore.Connect()
-	assert.NoError(t, err)
+	setupTest()
 
 	playerID := "test_player" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	playerID2 := "test_player" + strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -161,14 +197,13 @@ func TestInsertPairing(t *testing.T) {
 		},
 	}
 
-	err = dataStore.StorePairings(pairings)
+	err := dataStore.StorePairings(pairings)
 	assert.NoError(t, err, "failed to store pairings")
+	teardownTest()
 }
 
 func TestInsertPairings(t *testing.T) {
-	dataStore := New("localhost", 5432, "postgres", "postgres", "progression")
-	err := dataStore.Connect()
-	assert.NoError(t, err)
+	setupTest()
 
 	playerIDs := make([]string, 8)
 	for i := range playerIDs {
@@ -187,14 +222,13 @@ func TestInsertPairings(t *testing.T) {
 		})
 	}
 
-	err = dataStore.StorePairings(pairings)
+	err := dataStore.StorePairings(pairings)
 	assert.NoError(t, err, "failed to store pairings")
+	teardownTest()
 }
 
 func TestGetPairing_Player1(t *testing.T) {
-	dataStore := New("localhost", 5432, "postgres", "postgres", "progression")
-	err := dataStore.Connect()
-	assert.NoError(t, err)
+	setupTest()
 
 	playerIDs := make([]string, 8)
 	for i := range playerIDs {
@@ -213,18 +247,17 @@ func TestGetPairing_Player1(t *testing.T) {
 		})
 	}
 
-	err = dataStore.StorePairings(pairings)
+	err := dataStore.StorePairings(pairings)
 	assert.NoError(t, err, "failed to store pairings")
 
 	pairing, err := dataStore.GetPairing(playerIDs[2])
 	assert.NoError(t, err, "failed to get pairing")
 	assert.Equal(t, pairing, pairings[1], "pairing did not match")
+	teardownTest()
 }
 
 func TestGetPairing_Player2(t *testing.T) {
-	dataStore := New("localhost", 5432, "postgres", "postgres", "progression")
-	err := dataStore.Connect()
-	assert.NoError(t, err)
+	setupTest()
 
 	playerIDs := make([]string, 8)
 	for i := range playerIDs {
@@ -243,18 +276,17 @@ func TestGetPairing_Player2(t *testing.T) {
 		})
 	}
 
-	err = dataStore.StorePairings(pairings)
+	err := dataStore.StorePairings(pairings)
 	assert.NoError(t, err, "failed to store pairings")
 
 	pairing, err := dataStore.GetPairing(playerIDs[5])
 	assert.NoError(t, err, "failed to get pairing")
 	assert.Equal(t, pairing, pairings[2], "pairing did not match")
+	teardownTest()
 }
 
 func TestUpdatePairing(t *testing.T) {
-	dataStore := New("localhost", 5432, "postgres", "postgres", "progression")
-	err := dataStore.Connect()
-	assert.NoError(t, err)
+	setupTest()
 
 	playerID := "test_player" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	playerID2 := "test_player" + strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -269,7 +301,7 @@ func TestUpdatePairing(t *testing.T) {
 		},
 	}
 
-	err = dataStore.StorePairings(pairings)
+	err := dataStore.StorePairings(pairings)
 	assert.NoError(t, err, "failed to store pairings")
 
 	pairings[0].Wins1 = 2
@@ -279,4 +311,33 @@ func TestUpdatePairing(t *testing.T) {
 	storedPairing, err := dataStore.GetPairing(playerID2)
 	assert.NoError(t, err, "failed to get pairing")
 	assert.Equal(t, pairings[0], storedPairing, "pairing did not match")
+	teardownTest()
+}
+
+func TestStartRound(t *testing.T) {
+	setupTest()
+
+	err := dataStore.StartLeague()
+	assert.NoError(t, err, "failed to start league")
+
+	err = dataStore.StartLeague()
+	assert.ErrorIs(t, err, ErrLeagueAlreadyOngoing, "failed to start league")
+	teardownTest()
+}
+
+func TestEndRound(t *testing.T) {
+	setupTest()
+
+	err := dataStore.EndLeague()
+	assert.ErrorIs(t, err, ErrNoActiveLeague, "ending league without an active league shouldn't work")
+
+	err = dataStore.StartLeague()
+	assert.NoError(t, err, "failed to start league")
+
+	err = dataStore.EndLeague()
+	assert.NoError(t, err, "failed to end league")
+
+	err = dataStore.EndLeague()
+	assert.ErrorIs(t, err, ErrNoActiveLeague, "ending league without an active league shouldn't work")
+	teardownTest()
 }

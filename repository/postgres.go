@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -18,7 +19,7 @@ type postgresDataStore struct {
 	db       *gorm.DB
 }
 
-func New(hostname string, port int, username string, password string, database string) DataStore {
+func NewPostgresDataStore(hostname string, port int, username string, password string, database string) DataStore {
 	return &postgresDataStore{
 		hostname: hostname,
 		port:     port,
@@ -110,6 +111,10 @@ func (p *postgresDataStore) GetPlayer(userID string) (Player, error) {
 	var player Player
 	result := p.db.Table("player").First(&player, "id = ?", userID)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return Player{}, ErrPlayerNotFound
+		}
+
 		return player, fmt.Errorf(errMsg, result.Error)
 	}
 
@@ -174,4 +179,63 @@ func (p *postgresDataStore) UpdatePairing(pairing Pairing) error {
 	}
 
 	return nil
+}
+
+func (p *postgresDataStore) StartLeague() error {
+	const errMsg = "failed to start league: %w"
+	const query = `INSERT INTO league VALUES (0, true, now());`
+
+	_, err := p.GetRound()
+	if err != nil && !errors.Is(err, ErrNoActiveLeague) {
+		return fmt.Errorf(errMsg, err)
+	}
+
+	if err == nil {
+		return fmt.Errorf(errMsg, ErrLeagueAlreadyOngoing)
+	}
+
+	result := p.db.Exec(query)
+	if result.Error != nil {
+		return fmt.Errorf(errMsg, result.Error)
+	}
+
+	return nil
+}
+
+func (p *postgresDataStore) EndLeague() error {
+	const errMsg = "failed to end league: %w"
+	const query = `UPDATE league SET active = false WHERE active = true;`
+
+	_, err := p.GetRound()
+	if err != nil {
+		return fmt.Errorf(errMsg, err)
+	}
+
+	result := p.db.Exec(query)
+	if result.Error != nil {
+		return fmt.Errorf(errMsg, result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf(errMsg, ErrNoActiveLeague)
+	}
+
+	return nil
+}
+
+func (p *postgresDataStore) GetRound() (int, error) {
+	const errMsg = "failed to get current round: %w"
+	const query = `SELECT round FROM league where active = true;`
+
+	var round int
+	result := p.db.Raw(query).Find(&round)
+	if result.Error != nil {
+		return 0, fmt.Errorf(errMsg, result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return 0, fmt.Errorf(errMsg, ErrNoActiveLeague)
+	}
+
+	return round, nil
 }
