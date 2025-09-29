@@ -51,6 +51,10 @@ func (b *Bot) JoinCommand(s *discordgo.Session, i *discordgo.InteractionCreate) 
 }
 
 func (b *Bot) StartCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	options := i.ApplicationCommandData().Options
+	set := options[0].StringValue()
+
+	b.leagueManager
 
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,

@@ -9,6 +9,7 @@ type DataStore interface {
 	GetRound() (int, error)
 	GetCards(userID string) ([]Card, error)
 	StoreCards(userID string, cards []Card) error
+	GetAllPlayers() ([]Player, error)
 	GetPlayer(userID string) (Player, error)
 	UpdatePlayer(player Player) error
 	GetPairing(userID string) (Pairing, error)

@@ -59,6 +59,7 @@ func TestInsertCardPool(t *testing.T) {
 
 	cards := []Card{
 		{
+			Name:            "Adaptive Shimmerer",
 			Set:             "IKO",
 			CollectorNumber: 1,
 		},
@@ -75,14 +76,17 @@ func TestGetCardPool(t *testing.T) {
 
 	cards := []Card{
 		{
+			Name:            "Adaptive Shimmerer",
 			Set:             "IKO",
 			CollectorNumber: 1,
 		},
 		{
+			Name:            "Farfinder",
 			Set:             "IKO",
 			CollectorNumber: 2,
 		},
 		{
+			Name:            "Adaptive Shimmerer",
 			Set:             "IKO",
 			CollectorNumber: 1,
 		},
@@ -104,10 +108,12 @@ func TestCardPoolDeduplicate(t *testing.T) {
 
 	cards := []Card{
 		{
+			Name:            "Adaptive Shimmerer",
 			Set:             "IKO",
 			CollectorNumber: 1,
 		},
 		{
+			Name:            "Adaptive Shimmerer",
 			Set:             "IKO",
 			CollectorNumber: 1,
 		},
@@ -121,6 +127,7 @@ func TestCardPoolDeduplicate(t *testing.T) {
 	assert.NoError(t, err, "failed to get cards")
 
 	assert.Len(t, storedCards, 1, "expected 1 card")
+	assert.Equal(t, 2, storedCards[0].Count, "expected 2 copies")
 	teardownTest()
 }
 

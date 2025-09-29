@@ -11,12 +11,13 @@ import (
 )
 
 type config struct {
-	dcBotToken string
-	pgDatabase string
-	pgHostname string
-	pgPassword string
-	pgUsername string
-	pgPort     int
+	dcBotToken      string
+	mbpgHostaddress string
+	pgDatabase      string
+	pgHostname      string
+	pgPassword      string
+	pgUsername      string
+	pgPort          int
 }
 
 func main() {
@@ -46,11 +47,12 @@ func main() {
 
 func parseEnv() config {
 	conf := config{
-		dcBotToken: os.Getenv("DC_BOT_TOKEN"),
-		pgHostname: os.Getenv("PG_HOSTNAME"),
-		pgDatabase: os.Getenv("PG_DATABASE"),
-		pgUsername: os.Getenv("PG_USERNAME"),
-		pgPassword: os.Getenv("PG_PASSWORD"),
+		dcBotToken:      os.Getenv("DC_BOT_TOKEN"),
+		mbpgHostaddress: os.Getenv("MBPG_HOSTADDRESS"),
+		pgHostname:      os.Getenv("PG_HOSTNAME"),
+		pgDatabase:      os.Getenv("PG_DATABASE"),
+		pgUsername:      os.Getenv("PG_USERNAME"),
+		pgPassword:      os.Getenv("PG_PASSWORD"),
 	}
 
 	port, err := strconv.Atoi(os.Getenv("PG_PORT"))

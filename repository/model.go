@@ -9,6 +9,7 @@ type Player struct {
 
 // Card represents a card in a players card pool.
 type Card struct {
+	Name            string
 	Set             string
 	CollectorNumber int
 	Count           int

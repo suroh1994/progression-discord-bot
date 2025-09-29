@@ -3,7 +3,6 @@ package repository
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"gorm.io/driver/postgres"
@@ -50,7 +49,7 @@ func (p *postgresDataStore) generateDSN() string {
 func (p *postgresDataStore) StoreCards(userID string, cards []Card) error {
 	const errMsg = "failed to store cards: %w"
 	const query = `
-			INSERT INTO player_card_pool (id, set_code, collector_number, count) VALUES %s
+			INSERT INTO player_card_pool (id, name, set_code, collector_number, count) VALUES %s
 			ON CONFLICT (id, set_code, collector_number)
 			DO UPDATE SET count = EXCLUDED.count + player_card_pool.count`
 
@@ -65,24 +64,30 @@ func (p *postgresDataStore) StoreCards(userID string, cards []Card) error {
 }
 
 func generateRows(userID string, cards []Card) (string, []any) {
-	cardCounts := map[string]int{}
+	type CardAndCount struct {
+		Card
+		Count int
+	}
+
+	cardCounts := make(map[string]CardAndCount)
 
 	// group similar cards
 	for _, card := range cards {
-		key := card.Set + "|" + strconv.Itoa(card.CollectorNumber)
-		count, exists := cardCounts[key]
+		key := fmt.Sprintf("%s|%d", card.Set, card.CollectorNumber)
+		cardAndCount, exists := cardCounts[key]
 		if !exists {
-			count = 0
+			cardAndCount.Card = card
 		}
 
-		cardCounts[key] = count + 1
+		cardAndCount.Count++
+		cardCounts[key] = cardAndCount
 	}
 
 	// generate row per card
 	inClause := make([]string, 0, len(cardCounts))
 	args := make([]any, 0, len(cardCounts)*4)
 	for key, count := range cardCounts {
-		inClause = append(inClause, "(?, ?, ?, ?)")
+		inClause = append(inClause, "(?, ?, ?, ?, ?)")
 		keyParts := strings.Split(key, "|")
 		args = append(args, userID, keyParts[0], keyParts[1], count)
 	}
@@ -103,6 +108,18 @@ func (p *postgresDataStore) GetCards(userID string) ([]Card, error) {
 	}
 
 	return cards, nil
+}
+
+func (p *postgresDataStore) GetAllPlayers() ([]Player, error) {
+	const errMsg = "failed to get players: %w"
+
+	var players []Player
+	result := p.db.Table("player").Scan(&players)
+	if result.Error != nil {
+		return nil, fmt.Errorf(errMsg, result.Error)
+	}
+
+	return players, nil
 }
 
 func (p *postgresDataStore) GetPlayer(userID string) (Player, error) {
