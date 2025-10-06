@@ -43,16 +43,16 @@ func generateCommands() []*discordgo.ApplicationCommand {
 		},
 		{
 			Name:        "join",
-			Description: "Join an upcoming progression league.",
+			Description: "Join the upcoming league.",
 		},
 		{
 			Name:        "start",
-			Description: "Start a progression league.",
+			Description: "Start a new league.",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "set",
-					Description: "The set the league starts with.",
+					Name:        "set_code",
+					Description: "The first set to make available to all players.",
 					Required:    true,
 				},
 			},
@@ -68,7 +68,7 @@ func generateCommands() []*discordgo.ApplicationCommand {
 					Options: []*discordgo.ApplicationCommandOption{
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "set",
+							Name:        "set_code",
 							Description: "The set the card belongs to.",
 							Required:    true,
 						},
@@ -87,7 +87,7 @@ func generateCommands() []*discordgo.ApplicationCommand {
 					Options: []*discordgo.ApplicationCommandOption{
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "set",
+							Name:        "set_code",
 							Description: "The set to which the packs belong.",
 							Required:    true,
 						},

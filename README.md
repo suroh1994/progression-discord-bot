@@ -64,9 +64,9 @@ The opponent does not need to report the same match.
 `/report <games_won> <games_lost> <draws>`
 
 **Arguments:**
-- `<games_won>`is the number of games in the match won by the reporting player.
-- `<games_lost>`is the number of games in the match won by the opponent of the reporting player.
-- `<draws>`is the number of games in the match ending in a draw.
+- `<games_won>' is the number of games in the match won by the reporting player.
+- `<games_lost>' is the number of games in the match won by the opponent of the reporting player.
+- `<draws>' is the number of games in the match ending in a draw.
 
 **Restriction:**
 
@@ -87,14 +87,14 @@ The `/redeem` command has two different sub commands for redeeming individual ca
 <code>/redeem card</code> - Turning wild cards into specific cards
 </summary>
 
-Spend a wild card to get add a specific card from the unlocked sets to your card pool.
+Spend a wild card to add a specific card from the unlocked sets to your card pool.
 
 **Syntax:**
 `/redeem card <set_code> <collector_number>`
 
 **Arguments:**
-- `<set_code>`is a valid set code of an already unlocked set in the current league.
-- `<collector_number>`is the collector number of the card in the given set you want to add to your card pool.
+- `<set_code>' is a valid set code of an already unlocked set in the current league.
+- `<collector_number>' is the collector number of the card in the given set you want to add to your card pool.
 
 **Restriction:**
 
@@ -117,8 +117,8 @@ Spend one or more wild packs to add that many packs of random cards from one of 
 `/redeem pack <set_code> <count>`
 
 **Arguments:**
-- `<set_code>`is a valid set code of an already unlocked set in the current league.
-- `<count>`is the number of packs of the given set you want to add to your card pool.
+- `<set_code>` is a valid set code of an already unlocked set in the current league.
+- `<count>` is the number of packs of the given set you want to add to your card pool.
 
 **Restriction:**
 
@@ -221,7 +221,7 @@ The given set will be the first available set to redeem wild packs and cards for
 `/start <set_code>`
 
 **Arguments:**
-- `<set_code>`is a valid MTG set code of the first set to make available to all players.
+- `<set_code>` is a valid MTG set code of the first set to make available to all players.
 
 **Restriction:**
 
@@ -241,7 +241,7 @@ The given set will become available to redeem wild packs and cards for.
 `/next <set_code>`
 
 **Arguments:**
-- `<set_code>`is a valid MTG set code of the next set to make available to all players.
+- `<set_code>` is a valid MTG set code of the next set to make available to all players.
 
 **Restriction:**
 
@@ -262,7 +262,7 @@ If the player is part of a match, which hasn't been reported on yet, it will be 
 `/force_drop <username>`
 
 **Arguments:**
-- `<username>`is a valid discord handle of a player in the current league.
+- `<username>` is a valid discord handle of a player in the current league.
 
 **Restriction:**
 
@@ -282,10 +282,10 @@ Report on a match from the perspective of the given player.
 `/force_report <username> <games_won> <games_lost> <draws>`
 
 **Arguments:**
-- `<username>`is a valid discord handle of a player in the current league.
-- `<games_won>`is the number of games the given player has won.
-- `<games_lost>`is the number of games the given player has lost.
-- `<draws>`is the number draws in the match.
+- `<username>` is a valid discord handle of a player in the current league.
+- `<games_won>` is the number of games the given player has won.
+- `<games_lost>` is the number of games the given player has lost.
+- `<draws>` is the number draws in the match.
 
 **Restriction:**
 
@@ -306,7 +306,7 @@ Add a card to the ban list.
 `/ban <cardname>`
 
 **Arguments:**
-- `<cardname>`is a valid MTG card name.
+- `<cardname>` is a valid MTG card name.
 
 **Restriction:**
 
@@ -327,7 +327,7 @@ Remove a card from the ban list.
 `/unban <cardname>`
 
 **Arguments:**
-- `<cardname>`is a valid MTG card name.
+- `<cardname>` is a valid MTG card name.
 
 **Restriction:**
 
