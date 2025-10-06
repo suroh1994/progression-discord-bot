@@ -167,6 +167,42 @@ The command will fail if:
 - no league is ongoing
 - the user doesn't play in the current league
 </details>
+<details>
+<summary>
+<code>/sets</code> - Check the list of unlocked sets
+</summary>
+
+Get a list of all sets that are unlocked for the current league.
+
+**Syntax:**
+`/sets`
+
+**Arguments:**
+None
+
+**Restriction:**
+
+The command will fail if:
+- no league is ongoing
+</details>
+<details>
+<summary>
+<code>/bans</code> - Check the list of banned cards
+</summary>
+
+Get a list of all cards that are banned from the current league.
+
+**Syntax:**
+`/bans`
+
+**Arguments:**
+None
+
+**Restriction:**
+
+The command will fail if:
+- no league is ongoing
+</details>
 </details>
 
 <details>
