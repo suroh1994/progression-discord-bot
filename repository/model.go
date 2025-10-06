@@ -17,9 +17,9 @@ type Card struct {
 
 // Pairing represents a pairing of players in a round. Once any scores have been reported, the pairing is assumed to be over.
 type Pairing struct {
-	Round   int
-	Player1 string
-	Player2 string
+	Round   int    `gorm:"primaryKey"`
+	Player1 string `gorm:"primaryKey"`
+	Player2 string `gorm:"primaryKey"`
 	Wins1   int
 	Wins2   int
 	Draws   int
