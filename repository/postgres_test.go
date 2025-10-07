@@ -195,12 +195,12 @@ func TestInsertPairing(t *testing.T) {
 	playerID2 := "test_player" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	pairings := []Pairing{
 		{
-			Round:   1,
-			Player1: playerID,
-			Player2: playerID2,
-			Wins1:   0,
-			Wins2:   0,
-			Draws:   0,
+			Round:     1,
+			PlayerId1: playerID,
+			PlayerId2: playerID2,
+			Wins1:     0,
+			Wins2:     0,
+			Draws:     0,
 		},
 	}
 
@@ -220,12 +220,12 @@ func TestInsertPairings(t *testing.T) {
 	pairings := make([]Pairing, 0, len(playerIDs)/2)
 	for i := 0; i < len(playerIDs)/2; i++ {
 		pairings = append(pairings, Pairing{
-			Round:   1,
-			Player1: playerIDs[2*i],
-			Player2: playerIDs[2*i+1],
-			Wins1:   0,
-			Wins2:   0,
-			Draws:   0,
+			Round:     1,
+			PlayerId1: playerIDs[2*i],
+			PlayerId2: playerIDs[2*i+1],
+			Wins1:     0,
+			Wins2:     0,
+			Draws:     0,
 		})
 	}
 
@@ -245,12 +245,12 @@ func TestGetPairing_Player1(t *testing.T) {
 	pairings := make([]Pairing, 0, len(playerIDs)/2)
 	for i := 0; i < len(playerIDs)/2; i++ {
 		pairings = append(pairings, Pairing{
-			Round:   1,
-			Player1: playerIDs[2*i],
-			Player2: playerIDs[2*i+1],
-			Wins1:   0,
-			Wins2:   0,
-			Draws:   0,
+			Round:     1,
+			PlayerId1: playerIDs[2*i],
+			PlayerId2: playerIDs[2*i+1],
+			Wins1:     0,
+			Wins2:     0,
+			Draws:     0,
 		})
 	}
 
@@ -274,12 +274,12 @@ func TestGetPairing_Player2(t *testing.T) {
 	pairings := make([]Pairing, 0, len(playerIDs)/2)
 	for i := 0; i < len(playerIDs)/2; i++ {
 		pairings = append(pairings, Pairing{
-			Round:   1,
-			Player1: playerIDs[2*i],
-			Player2: playerIDs[2*i+1],
-			Wins1:   0,
-			Wins2:   0,
-			Draws:   0,
+			Round:     1,
+			PlayerId1: playerIDs[2*i],
+			PlayerId2: playerIDs[2*i+1],
+			Wins1:     0,
+			Wins2:     0,
+			Draws:     0,
 		})
 	}
 
@@ -299,12 +299,12 @@ func TestUpdatePairing(t *testing.T) {
 	playerID2 := "test_player" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	pairings := []Pairing{
 		{
-			Round:   1,
-			Player1: playerID,
-			Player2: playerID2,
-			Wins1:   0,
-			Wins2:   0,
-			Draws:   0,
+			Round:     1,
+			PlayerId1: playerID,
+			PlayerId2: playerID2,
+			Wins1:     0,
+			Wins2:     0,
+			Draws:     0,
 		},
 	}
 

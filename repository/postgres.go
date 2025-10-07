@@ -49,8 +49,8 @@ func (p *postgresDataStore) generateDSN() string {
 func (p *postgresDataStore) StoreCards(userID string, cards []Card) error {
 	const errMsg = "failed to store cards: %w"
 	const query = `
-			INSERT INTO player_card_pool (id, name, set_code, collector_number, count) VALUES %s
-			ON CONFLICT (id, set_code, collector_number)
+			INSERT INTO player_card_pool (player_id, name, set_code, collector_number, count) VALUES %s
+			ON CONFLICT (player_id, set_code, collector_number)
 			DO UPDATE SET count = EXCLUDED.count + player_card_pool.count`
 
 	fields, args := generateRows(userID, cards)
@@ -86,10 +86,9 @@ func generateRows(userID string, cards []Card) (string, []any) {
 	// generate row per card
 	inClause := make([]string, 0, len(cardCounts))
 	args := make([]any, 0, len(cardCounts)*4)
-	for key, count := range cardCounts {
+	for _, cardAndCount := range cardCounts {
 		inClause = append(inClause, "(?, ?, ?, ?, ?)")
-		keyParts := strings.Split(key, "|")
-		args = append(args, userID, keyParts[0], keyParts[1], count)
+		args = append(args, userID, cardAndCount.Name, cardAndCount.Set, cardAndCount.CollectorNumber, cardAndCount.Count)
 	}
 
 	inClauseString := strings.Join(inClause, ", ")
@@ -101,7 +100,7 @@ func (p *postgresDataStore) GetCards(userID string) ([]Card, error) {
 
 	var cards []Card
 	result := p.db.Table("player_card_pool").
-		Where("id = ?", userID).
+		Where("player_id = ?", userID).
 		Find(&cards)
 	if result.Error != nil {
 		return nil, fmt.Errorf(errMsg, result.Error)
@@ -154,8 +153,8 @@ func (p *postgresDataStore) GetPairing(userID string) (Pairing, error) {
 
 	var pairing Pairing
 	result := p.db.Table("pairing").
-		Where("player1 = ?", userID).
-		Or("player2 = ?", userID).
+		Where("player_id1 = ?", userID).
+		Or("player_id2 = ?", userID).
 		Find(&pairing)
 	if result.Error != nil {
 		return pairing, fmt.Errorf(errMsg, result.Error)
@@ -183,10 +182,10 @@ func (p *postgresDataStore) UpdatePairing(pairing Pairing) error {
 	const errMsg = "failed to update pairing: %w"
 
 	const query = `UPDATE pairing SET wins1 = ?, wins2 = ?, draws = ?
-               WHERE round = ? AND player1 = ? AND player2 = ?
+               WHERE round = ? AND player_id1 = ? AND player_id2 = ?
                AND wins1 = 0 AND wins2 = 0 AND draws = 0`
 
-	result := p.db.Exec(query, pairing.Wins1, pairing.Wins2, pairing.Draws, pairing.Round, pairing.Player1, pairing.Player2)
+	result := p.db.Exec(query, pairing.Wins1, pairing.Wins2, pairing.Draws, pairing.Round, pairing.PlayerId1, pairing.PlayerId2)
 	if result.Error != nil {
 		return fmt.Errorf(errMsg, result.Error)
 	}
