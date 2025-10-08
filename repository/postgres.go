@@ -1,12 +1,12 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"strings"
-
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"progression/repository/postgres"
 )
 
 type postgresDataStore struct {
@@ -15,7 +15,8 @@ type postgresDataStore struct {
 	username string
 	password string
 	database string
-	db       *gorm.DB
+	db       *postgres.Queries
+	conn     *pgx.Conn
 }
 
 func NewPostgresDataStore(hostname string, port int, username string, password string, database string) DataStore {
@@ -30,176 +31,18 @@ func NewPostgresDataStore(hostname string, port int, username string, password s
 
 func (p *postgresDataStore) Connect() error {
 	const errMsg = "unable to connect to datastore: %w"
-	db, err := gorm.Open(postgres.Open(p.generateDSN()), &gorm.Config{})
+	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", p.username, p.password, p.hostname, p.port, p.database)
+	conn, err := pgx.Connect(context.Background(), url)
 	if err != nil {
 		return fmt.Errorf(errMsg, err)
 	}
-
-	p.db = db
-	return nil
-}
-
-func (p *postgresDataStore) generateDSN() string {
-	// TODO Properly extract the current timezone of the server...
-	TZ := "Europe/Berlin"
-	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=%s",
-		p.hostname, p.username, p.password, p.database, p.port, TZ)
-}
-
-func (p *postgresDataStore) StoreCards(userID string, cards []Card) error {
-	const errMsg = "failed to store cards: %w"
-	const query = `
-			INSERT INTO player_card_pool (player_id, name, set_code, collector_number, count) VALUES %s
-			ON CONFLICT (player_id, set_code, collector_number)
-			DO UPDATE SET count = EXCLUDED.count + player_card_pool.count`
-
-	fields, args := generateRows(userID, cards)
-	result := p.db.Exec(fmt.Sprintf(query, fields), args...)
-
-	if result.Error != nil {
-		return fmt.Errorf(errMsg, result.Error)
-	}
-
-	return nil
-}
-
-func generateRows(userID string, cards []Card) (string, []any) {
-	type CardAndCount struct {
-		Card
-		Count int
-	}
-
-	cardCounts := make(map[string]CardAndCount)
-
-	// group similar cards
-	for _, card := range cards {
-		key := fmt.Sprintf("%s|%d", card.Set, card.CollectorNumber)
-		cardAndCount, exists := cardCounts[key]
-		if !exists {
-			cardAndCount.Card = card
-		}
-
-		cardAndCount.Count++
-		cardCounts[key] = cardAndCount
-	}
-
-	// generate row per card
-	inClause := make([]string, 0, len(cardCounts))
-	args := make([]any, 0, len(cardCounts)*4)
-	for _, cardAndCount := range cardCounts {
-		inClause = append(inClause, "(?, ?, ?, ?, ?)")
-		args = append(args, userID, cardAndCount.Name, cardAndCount.Set, cardAndCount.CollectorNumber, cardAndCount.Count)
-	}
-
-	inClauseString := strings.Join(inClause, ", ")
-	return inClauseString, args
-}
-
-func (p *postgresDataStore) GetCards(userID string) ([]Card, error) {
-	const errMsg = "failed to fetch cards: %w"
-
-	var cards []Card
-	result := p.db.Table("player_card_pool").
-		Where("player_id = ?", userID).
-		Find(&cards)
-	if result.Error != nil {
-		return nil, fmt.Errorf(errMsg, result.Error)
-	}
-
-	return cards, nil
-}
-
-func (p *postgresDataStore) GetAllPlayers() ([]Player, error) {
-	const errMsg = "failed to get players: %w"
-
-	var players []Player
-	result := p.db.Table("player").Scan(&players)
-	if result.Error != nil {
-		return nil, fmt.Errorf(errMsg, result.Error)
-	}
-
-	return players, nil
-}
-
-func (p *postgresDataStore) GetPlayer(userID string) (Player, error) {
-	const errMsg = "failed to get player: %w"
-
-	var player Player
-	result := p.db.Table("player").First(&player, "id = ?", userID)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return Player{}, ErrPlayerNotFound
-		}
-
-		return player, fmt.Errorf(errMsg, result.Error)
-	}
-
-	return player, nil
-}
-
-func (p *postgresDataStore) UpdatePlayer(player Player) error {
-	const errMsg = "failed to update player: %w"
-
-	result := p.db.Table("player").Save(&player)
-	if result.Error != nil {
-		return fmt.Errorf(errMsg, result.Error)
-	}
-
-	return nil
-}
-
-func (p *postgresDataStore) GetPairing(userID string) (Pairing, error) {
-	const errMsg = "failed to get pairing: %w"
-
-	var pairing Pairing
-	result := p.db.Table("pairing").
-		Where("player_id1 = ?", userID).
-		Or("player_id2 = ?", userID).
-		Find(&pairing)
-	if result.Error != nil {
-		return pairing, fmt.Errorf(errMsg, result.Error)
-	}
-
-	if result.RowsAffected == 0 {
-		return pairing, ErrPairingNotFound
-	}
-
-	return pairing, nil
-}
-
-func (p *postgresDataStore) StorePairings(pairings []Pairing) error {
-	const errMsg = "failed to store pairings: %w"
-
-	result := p.db.Table("pairing").Create(&pairings)
-	if result.Error != nil {
-		return fmt.Errorf(errMsg, result.Error)
-	}
-
-	return nil
-}
-
-func (p *postgresDataStore) UpdatePairing(pairing Pairing) error {
-	const errMsg = "failed to update pairing: %w"
-
-	const query = `UPDATE pairing SET wins1 = ?, wins2 = ?, draws = ?
-               WHERE round = ? AND player_id1 = ? AND player_id2 = ?
-               AND wins1 = 0 AND wins2 = 0 AND draws = 0`
-
-	result := p.db.Exec(query, pairing.Wins1, pairing.Wins2, pairing.Draws, pairing.Round, pairing.PlayerId1, pairing.PlayerId2)
-	if result.Error != nil {
-		return fmt.Errorf(errMsg, result.Error)
-	}
-
-	if result.RowsAffected == 0 {
-		return fmt.Errorf(errMsg, ErrPairingNotFound)
-	}
-
+	p.conn = conn
+	p.db = postgres.New(conn)
 	return nil
 }
 
 func (p *postgresDataStore) StartLeague() error {
 	const errMsg = "failed to start league: %w"
-	const query = `INSERT INTO league VALUES (0, true, now());`
 
 	_, err := p.GetRound()
 	if err != nil && !errors.Is(err, ErrNoActiveLeague) {
@@ -210,48 +53,233 @@ func (p *postgresDataStore) StartLeague() error {
 		return fmt.Errorf(errMsg, ErrLeagueAlreadyOngoing)
 	}
 
-	result := p.db.Exec(query)
-	if result.Error != nil {
-		return fmt.Errorf(errMsg, result.Error)
+	err = p.db.StartLeague(context.Background())
+	if err != nil {
+		return fmt.Errorf(errMsg, err)
 	}
-
 	return nil
 }
 
 func (p *postgresDataStore) EndLeague() error {
 	const errMsg = "failed to end league: %w"
-	const query = `UPDATE league SET active = false WHERE active = true;`
-
-	_, err := p.GetRound()
+	err := p.db.EndLeague(context.Background())
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "20000" { // not_found in custom exception
+				return fmt.Errorf(errMsg, ErrNoActiveLeague)
+			}
+		}
 		return fmt.Errorf(errMsg, err)
 	}
-
-	result := p.db.Exec(query)
-	if result.Error != nil {
-		return fmt.Errorf(errMsg, result.Error)
-	}
-
-	if result.RowsAffected == 0 {
-		return fmt.Errorf(errMsg, ErrNoActiveLeague)
-	}
-
 	return nil
 }
 
 func (p *postgresDataStore) GetRound() (int, error) {
 	const errMsg = "failed to get current round: %w"
-	const query = `SELECT round FROM league where active = true;`
+	round, err := p.db.GetCurrentRound(context.Background())
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, fmt.Errorf(errMsg, ErrNoActiveLeague)
+		}
+		return 0, fmt.Errorf(errMsg, err)
+	}
+	return int(round), nil
+}
 
-	var round int
-	result := p.db.Raw(query).Find(&round)
-	if result.Error != nil {
-		return 0, fmt.Errorf(errMsg, result.Error)
+func (p *postgresDataStore) GetCards(userID string) ([]Card, error) {
+	const errMsg = "failed to fetch cards: %w"
+	cards, err := p.db.GetCards(context.Background(), userID)
+	if err != nil {
+		return nil, fmt.Errorf(errMsg, err)
 	}
 
-	if result.RowsAffected == 0 {
-		return 0, fmt.Errorf(errMsg, ErrNoActiveLeague)
+	ret := make([]Card, len(cards))
+	for i, c := range cards {
+		ret[i] = Card{
+			Name:            c.Name,
+			Set:             c.SetCode,
+			CollectorNumber: int(c.CollectorNumber),
+			Count:           int(c.Count),
+		}
+	}
+	return ret, nil
+}
+
+func (p *postgresDataStore) StoreCards(userID string, cards []Card) error {
+	const errMsg = "failed to store cards: %w"
+
+	tx, err := p.conn.Begin(context.Background())
+	if err != nil {
+		return fmt.Errorf(errMsg, err)
+	}
+	defer tx.Rollback(context.Background())
+	qtx := p.db.WithTx(tx)
+
+	playerIDs := make([]string, len(cards))
+	names := make([]string, len(cards))
+	setCodes := make([]string, len(cards))
+	collectorNumbers := make([]int32, len(cards))
+	counts := make([]int32, len(cards))
+
+	for i, card := range cards {
+		playerIDs[i] = userID
+		names[i] = card.Name
+		setCodes[i] = card.Set
+		collectorNumbers[i] = int32(card.CollectorNumber)
+		counts[i] = int32(card.Count)
 	}
 
-	return round, nil
+	err = qtx.StoreCards(context.Background(), postgres.StoreCardsParams{
+		PlayerID:        playerIDs,
+		Name:            names,
+		SetCode:         setCodes,
+		CollectorNumber: collectorNumbers,
+		Count:           counts,
+	})
+
+	if err != nil {
+		return fmt.Errorf(errMsg, err)
+	}
+
+	return tx.Commit(context.Background())
+}
+
+func (p *postgresDataStore) GetAllPlayers() ([]Player, error) {
+	const errMsg = "failed to get players: %w"
+	players, err := p.db.GetAllPlayers(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf(errMsg, err)
+	}
+
+	ret := make([]Player, len(players))
+	for i, p := range players {
+		ret[i] = Player{
+			Id:        p.ID,
+			WildCards: int(p.WildCardCount),
+			WildPacks: int(p.WildPackCount),
+		}
+	}
+	return ret, nil
+}
+
+func (p *postgresDataStore) GetPlayer(userID string) (Player, error) {
+	const errMsg = "failed to get player: %w"
+	player, err := p.db.GetPlayer(context.Background(), userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Player{}, ErrPlayerNotFound
+		}
+		return Player{}, fmt.Errorf(errMsg, err)
+	}
+	return Player{
+		Id:        player.ID,
+		WildCards: int(player.WildCardCount),
+		WildPacks: int(player.WildPackCount),
+	}, nil
+}
+
+func (p *postgresDataStore) UpdatePlayer(player Player) error {
+	const errMsg = "failed to update player: %w"
+	err := p.db.UpdatePlayer(context.Background(), postgres.UpdatePlayerParams{
+		ID:            player.Id,
+		WildCardCount: int32(player.WildCards),
+		WildPackCount: int32(player.WildPacks),
+	})
+	if err != nil {
+		return fmt.Errorf(errMsg, err)
+	}
+	return nil
+}
+
+func (p *postgresDataStore) GetPairing(userID string) (Pairing, error) {
+	const errMsg = "failed to get pairing: %w"
+	round, err := p.GetRound()
+	if err != nil {
+		return Pairing{}, fmt.Errorf(errMsg, err)
+	}
+
+	pairing, err := p.db.GetPairing(context.Background(), postgres.GetPairingParams{
+		Round:     int32(round),
+		PlayerId1: userID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Pairing{}, ErrPairingNotFound
+		}
+		return Pairing{}, fmt.Errorf(errMsg, err)
+	}
+
+	return Pairing{
+		Round:     int(pairing.Round),
+		PlayerId1: pairing.PlayerId1,
+		PlayerId2: pairing.PlayerId2,
+		Wins1:     int(pairing.Wins1),
+		Wins2:     int(pairing.Wins2),
+		Draws:     int(pairing.Draws),
+	}, nil
+}
+
+func (p *postgresDataStore) StorePairings(pairings []Pairing) error {
+	const errMsg = "failed to store pairings: %w"
+
+	tx, err := p.conn.Begin(context.Background())
+	if err != nil {
+		return fmt.Errorf(errMsg, err)
+	}
+	defer tx.Rollback(context.Background())
+	qtx := p.db.WithTx(tx)
+
+	rounds := make([]int32, len(pairings))
+	player1IDs := make([]string, len(pairings))
+	player2IDs := make([]string, len(pairings))
+	wins1 := make([]int32, len(pairings))
+	wins2 := make([]int32, len(pairings))
+	draws := make([]int32, len(pairings))
+
+	for i, p := range pairings {
+		rounds[i] = int32(p.Round)
+		player1IDs[i] = p.PlayerId1
+		player2IDs[i] = p.PlayerId2
+		wins1[i] = int32(p.Wins1)
+		wins2[i] = int32(p.Wins2)
+		draws[i] = int32(p.Draws)
+	}
+
+	err = qtx.StorePairings(context.Background(), postgres.StorePairingsParams{
+		Round:     rounds,
+		PlayerId1: player1IDs,
+		PlayerId2: player2IDs,
+		Wins1:     wins1,
+		Wins2:     wins2,
+		Draws:     draws,
+	})
+
+	if err != nil {
+		return fmt.Errorf(errMsg, err)
+	}
+
+	return tx.Commit(context.Background())
+}
+
+func (p *postgresDataStore) UpdatePairing(pairing Pairing) error {
+	const errMsg = "failed to update pairing: %w"
+	err := p.db.UpdatePairing(context.Background(), postgres.UpdatePairingParams{
+		Round:     int32(pairing.Round),
+		PlayerId1: pairing.PlayerId1,
+		PlayerId2: pairing.PlayerId2,
+		Wins1:     int32(pairing.Wins1),
+		Wins2:     int32(pairing.Wins2),
+		Draws:     int32(pairing.Draws),
+	})
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "20000" {
+				return fmt.Errorf(errMsg, ErrPairingNotFound)
+			}
+		}
+		return fmt.Errorf(errMsg, err)
+	}
+	return nil
 }
