@@ -25,7 +25,7 @@ run-pgdb:
 	-e POSTGRES_PASSWORD=postgres \
 	-e POSTGRES_DB=progression \
 	-p 5432:5432 \
-	-v ./db-scripts:/docker-entrypoint-initdb.d \
+	-v ./db-scripts/init:/docker-entrypoint-initdb.d \
 	postgres:18.0-alpine3.22
 
 stop-pgdb:
