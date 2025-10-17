@@ -86,10 +86,9 @@ func generateRows(userID string, cards []Card) (string, []any) {
 	// generate row per card
 	inClause := make([]string, 0, len(cardCounts))
 	args := make([]any, 0, len(cardCounts)*4)
-	for key, count := range cardCounts {
+	for _, cardAndCount := range cardCounts {
 		inClause = append(inClause, "(?, ?, ?, ?, ?)")
-		keyParts := strings.Split(key, "|")
-		args = append(args, userID, keyParts[0], keyParts[1], count)
+		args = append(args, userID, cardAndCount.Name, cardAndCount.Set, cardAndCount.CollectorNumber, cardAndCount.Count)
 	}
 
 	inClauseString := strings.Join(inClause, ", ")

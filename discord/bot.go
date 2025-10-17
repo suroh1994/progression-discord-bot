@@ -46,6 +46,30 @@ func generateCommands() []*discordgo.ApplicationCommand {
 			Description: "Join the upcoming league.",
 		},
 		{
+			Name:        "report",
+			Description: "Report match results.",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "games_won",
+					Description: "The number of games in the match won by the reporting player.",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "games_lost",
+					Description: "The number of games in the match won by the opponent of the reporting player.",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "draws",
+					Description: "The number of games in the match ending in a draw.",
+					Required:    true,
+				},
+			},
+		},
+		{
 			Name:        "start",
 			Description: "Start a new league.",
 			Options: []*discordgo.ApplicationCommandOption{
@@ -106,8 +130,9 @@ func generateCommands() []*discordgo.ApplicationCommand {
 
 func generateCommandHandlerMap(bot *Bot) map[string]DiscordInteractionFunction {
 	commandHandlers := map[string]DiscordInteractionFunction{
-		"help": bot.HelpCommand,
-		"join": bot.JoinCommand,
+		"help":   bot.HelpCommand,
+		"join":   bot.JoinCommand,
+		"report": bot.ReportCommand,
 	}
 	return commandHandlers
 }

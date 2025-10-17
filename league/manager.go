@@ -43,6 +43,44 @@ func (m *Manager) JoinLeague(userID string) error {
 	return nil
 }
 
+func (m *Manager) ReportMatch(userID string, wins, losses, draws int) error {
+	const errMsg = "failed to report match: %w"
+
+	if wins == 0 && losses == 0 && draws == 0 {
+		return fmt.Errorf(errMsg, ErrInvalidMatchResult)
+	}
+
+	pairing, err := m.dataStore.GetPairing(userID)
+	if err != nil {
+		return fmt.Errorf(errMsg, err)
+	}
+
+	if isMatchReported(pairing) {
+		return fmt.Errorf(errMsg, ErrMatchAlreadyReported)
+	}
+
+	if pairing.Player1 == userID {
+		pairing.Wins1 = wins
+		pairing.Wins2 = losses
+		pairing.Draws = draws
+	} else {
+		pairing.Wins1 = losses
+		pairing.Wins2 = wins
+		pairing.Draws = draws
+	}
+
+	err = m.dataStore.UpdatePairing(pairing)
+	if err != nil {
+		return fmt.Errorf(errMsg, err)
+	}
+
+	return nil
+}
+
+func isMatchReported(pairing repository.Pairing) bool {
+	return pairing.Wins1 != 0 || pairing.Wins2 != 0 || pairing.Draws != 0
+}
+
 func (m *Manager) StartRound(set string) (map[string][]repository.Card, error) {
 	const errMsg = "failed to start round: %w"
 
