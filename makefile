@@ -30,3 +30,5 @@ run-pgdb:
 
 stop-pgdb:
 	docker kill card-db
+
+run-dependencies: run-mbpg run-pgdb
