@@ -15,4 +15,6 @@ type DataStore interface {
 	GetPairing(userID string) (Pairing, error)
 	StorePairings(pairings []Pairing) error
 	UpdatePairing(pairing Pairing) error
+	IsAdmin(userID string) (bool, error)
+	MakeAdmin(userID string) error
 }
