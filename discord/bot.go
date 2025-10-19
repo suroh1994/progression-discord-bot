@@ -47,6 +47,14 @@ func generateCommands() []*discordgo.ApplicationCommand {
 			Description: "Join the upcoming league.",
 		},
 		{
+			Name:        "pool",
+			Description: "Get a list of all cards in your card pool.",
+		},
+		{
+			Name:        "balance",
+			Description: "Check the number of wild cards & packs available to you.",
+		},
+		{
 			Name:        "report",
 			Description: "Report match results.",
 			Options: []*discordgo.ApplicationCommandOption{
@@ -131,9 +139,11 @@ func generateCommands() []*discordgo.ApplicationCommand {
 
 func generateCommandHandlerMap(bot *Bot) map[string]InteractionFunction {
 	commandHandlers := map[string]InteractionFunction{
-		"help":   WithErrorLogging(bot.HelpCommand),
-		"join":   WithErrorLogging(bot.JoinCommand),
-		"report": WithErrorLogging(bot.ReportCommand),
+		"help":    WithErrorLogging(bot.HelpCommand),
+		"join":    WithErrorLogging(bot.JoinCommand),
+		"pool":    WithErrorLogging(bot.PoolCommand),
+		"balance": WithErrorLogging(bot.BalanceCommand),
+		"report":  WithErrorLogging(bot.ReportCommand),
 	}
 	return commandHandlers
 }

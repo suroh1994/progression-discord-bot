@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"progression/league"
+	"progression/repository"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -12,6 +14,45 @@ func (b *Bot) HelpCommand(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	message := "Please check the command section in the bot README here: https://github.com/suroh1994/progression-discord-bot?tab=readme-ov-file#commands"
 
 	return b.SendMessage(s, i, message)
+}
+
+func (b *Bot) BalanceCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+	userID := i.Member.User.ID
+	var message string
+	player, err := b.leagueManager.GetPlayerBalance(userID)
+	if err != nil {
+		message = "Error getting your balance: " + err.Error()
+	} else {
+		message = fmt.Sprintf("Wild cards: %d\nWild packs: %d", player.WildCards, player.WildPacks)
+	}
+
+	return b.SendMessage(s, i, message)
+}
+
+func (b *Bot) PoolCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+	userID := i.Member.User.ID
+	var message string
+	cards, err := b.leagueManager.GetPlayerCards(userID)
+	if err != nil {
+		message = "Error getting your card pool: " + err.Error()
+	} else {
+		message = formatCardList(cards)
+	}
+
+	return b.SendMessage(s, i, message)
+}
+
+func formatCardList(cards []repository.Card) string {
+	if len(cards) == 0 {
+		return "You currently have no cards in your pool."
+	}
+	var builder strings.Builder
+	builder.WriteString("```\n")
+	for _, card := range cards {
+		builder.WriteString(fmt.Sprintf("%d %s\n", card.Count, card.Name))
+	}
+	builder.WriteString("```")
+	return builder.String()
 }
 
 func (b *Bot) JoinCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
