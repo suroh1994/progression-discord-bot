@@ -1,11 +1,59 @@
 package discord
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"errors"
+	"fmt"
+	"progression/league"
 
-func (b *Bot) HelpCommand(*discordgo.Session, *discordgo.InteractionCreate) {
+	"github.com/bwmarrin/discordgo"
+)
 
+func (b *Bot) HelpCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+	message := "Please check the command section in the bot README here: https://github.com/suroh1994/progression-discord-bot?tab=readme-ov-file#commands"
+
+	return b.SendMessage(s, i, message)
 }
 
-func (b *Bot) JoinCommand(*discordgo.Session, *discordgo.InteractionCreate) {
+func (b *Bot) JoinCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+	userID := i.Member.User.ID
 
+	var message string
+	err := b.leagueManager.JoinLeague(userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, league.ErrPlayerAlreadyJoined):
+			message = "You've already joined the league."
+		default:
+			message = "Error joining the league: " + err.Error()
+		}
+	} else {
+		message = "You've joined the league."
+	}
+
+	return b.SendMessage(s, i, message)
+}
+
+func (b *Bot) ReportCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+	userID := i.Member.User.ID
+	commandData := i.ApplicationCommandData()
+	wins := commandData.GetOption("games_won").IntValue()
+	losses := commandData.GetOption("games_lost").IntValue()
+	draws := commandData.GetOption("draws").IntValue()
+
+	var message string
+	err := b.leagueManager.ReportMatch(userID, int(wins), int(losses), int(draws))
+	if err != nil {
+		switch {
+		case errors.Is(err, league.ErrInvalidMatchResult):
+			message = fmt.Sprintf("The given match result is invalid. Given: %d wins, %d losses and %d draws.", wins, losses, int(draws))
+		case errors.Is(err, league.ErrMatchAlreadyReported):
+			message = "Your match has already been reported."
+		default:
+			message = "Error reporting match result: " + err.Error()
+		}
+	} else {
+		message = "Match result reported successfully!"
+	}
+
+	return b.SendMessage(s, i, message)
 }
