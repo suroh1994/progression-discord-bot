@@ -16,6 +16,19 @@ func (b *Bot) HelpCommand(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	return b.SendMessage(s, i, message)
 }
 
+func (b *Bot) BalanceCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+	userID := i.Member.User.ID
+	var message string
+	player, err := b.leagueManager.GetPlayerBalance(userID)
+	if err != nil {
+		message = "Error getting your balance: " + err.Error()
+	} else {
+		message = fmt.Sprintf("Wild cards: %d\nWild packs: %d", player.WildCards, player.WildPacks)
+	}
+
+	return b.SendMessage(s, i, message)
+}
+
 func (b *Bot) PoolCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	userID := i.Member.User.ID
 	var message string

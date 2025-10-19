@@ -141,3 +141,14 @@ func (m *Manager) GetPlayerCards(userID string) ([]repository.Card, error) {
 
 	return cards, nil
 }
+
+func (m *Manager) GetPlayerBalance(userID string) (repository.Player, error) {
+	const errMsg = "failed to get player balance: %w"
+
+	player, err := m.dataStore.GetPlayer(userID)
+	if err != nil {
+		return repository.Player{}, fmt.Errorf(errMsg, err)
+	}
+
+	return player, nil
+}
