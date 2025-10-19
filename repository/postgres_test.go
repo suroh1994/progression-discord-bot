@@ -348,3 +348,33 @@ func TestEndRound(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNoActiveLeague, "ending league without an active league shouldn't work")
 	teardownTest()
 }
+
+func TestMakeAdmin(t *testing.T) {
+	setupTest()
+
+	adminID := "test_admin" + strconv.FormatInt(time.Now().UnixMilli(), 10)
+
+	err := dataStore.MakeAdmin(adminID)
+	assert.NoError(t, err, "failed to set admin status")
+
+	teardownTest()
+}
+
+func TestIsAdmin(t *testing.T) {
+	setupTest()
+
+	adminID := "test_admin" + strconv.FormatInt(time.Now().UnixMilli(), 10)
+
+	isAdmin, err := dataStore.IsAdmin(adminID)
+	assert.NoError(t, err, "failed to check admin status")
+	assert.False(t, isAdmin, "admin should be false")
+
+	err = dataStore.MakeAdmin(adminID)
+	assert.NoError(t, err, "failed to set admin status")
+
+	isAdmin, err = dataStore.IsAdmin(adminID)
+	assert.NoError(t, err, "failed to check admin status")
+	assert.True(t, isAdmin, "admin should be true")
+
+	teardownTest()
+}

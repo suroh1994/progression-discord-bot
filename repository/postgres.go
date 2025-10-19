@@ -255,3 +255,27 @@ func (p *postgresDataStore) GetRound() (int, error) {
 
 	return round, nil
 }
+
+func (p *postgresDataStore) IsAdmin(userID string) (bool, error) {
+	const errMsg = "failed to check admin permission: %w"
+
+	const query = `SELECT 1 FROM admin WHERE id = ?;`
+	result := p.db.Exec(query, userID)
+	if result.Error != nil {
+		return false, fmt.Errorf(errMsg, result.Error)
+	}
+
+	return result.RowsAffected == 1, nil
+}
+
+func (p *postgresDataStore) MakeAdmin(userID string) error {
+	const errMsg = "failed to check admin permission: %w"
+
+	const query = `INSERT INTO admin VALUES (?);`
+	result := p.db.Exec(query, userID)
+	if result.Error != nil {
+		return fmt.Errorf(errMsg, result.Error)
+	}
+
+	return nil
+}
