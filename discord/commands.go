@@ -16,8 +16,8 @@ func (b *Bot) HelpCommand(s *discordgo.Session, i *discordgo.InteractionCreate) 
 
 func (b *Bot) JoinCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	userID := i.Member.User.ID
-	var message string
 
+	var message string
 	err := b.leagueManager.JoinLeague(userID)
 	if err != nil {
 		switch {
@@ -35,13 +35,12 @@ func (b *Bot) JoinCommand(s *discordgo.Session, i *discordgo.InteractionCreate) 
 
 func (b *Bot) ReportCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	userID := i.Member.User.ID
-	var message string
-
 	commandData := i.ApplicationCommandData()
 	wins := commandData.GetOption("games_won").IntValue()
 	losses := commandData.GetOption("games_lost").IntValue()
 	draws := commandData.GetOption("draws").IntValue()
 
+	var message string
 	err := b.leagueManager.ReportMatch(userID, int(wins), int(losses), int(draws))
 	if err != nil {
 		switch {
