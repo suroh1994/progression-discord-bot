@@ -1,7 +1,8 @@
 package discord
 
 import (
-	"log"
+	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"progression/league"
@@ -9,12 +10,12 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-type DiscordInteractionFunction func(*discordgo.Session, *discordgo.InteractionCreate)
+type InteractionFunction func(*discordgo.Session, *discordgo.InteractionCreate)
 
 type Bot struct {
 	session         *discordgo.Session
 	commands        []*discordgo.ApplicationCommand
-	commandHandlers map[string]DiscordInteractionFunction
+	commandHandlers map[string]InteractionFunction
 	leagueManager   *league.Manager
 }
 
@@ -128,22 +129,24 @@ func generateCommands() []*discordgo.ApplicationCommand {
 	}
 }
 
-func generateCommandHandlerMap(bot *Bot) map[string]DiscordInteractionFunction {
-	commandHandlers := map[string]DiscordInteractionFunction{
-		"help":   bot.HelpCommand,
-		"join":   bot.JoinCommand,
-		"report": bot.ReportCommand,
+func generateCommandHandlerMap(bot *Bot) map[string]InteractionFunction {
+	commandHandlers := map[string]InteractionFunction{
+		"help":   WithErrorLogging(bot.HelpCommand),
+		"join":   WithErrorLogging(bot.JoinCommand),
+		"report": WithErrorLogging(bot.ReportCommand),
 	}
 	return commandHandlers
 }
 
 func (b *Bot) Start() error {
-	log.Println("Adding Ready Handler...")
+	slog.Info("Adding Ready Handler...")
 	b.session.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		log.Printf("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
+		slog.Info("Successfully logged in.",
+			"botname", fmt.Sprintf("%s#%s", s.State.User.Username, s.State.User.Discriminator),
+		)
 	})
 
-	log.Println("Adding Interaction Handler...")
+	slog.Info("Adding Interaction Handler...")
 	b.session.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if h, ok := b.commandHandlers[i.ApplicationCommandData().Name]; ok {
 			h(s, i)
@@ -155,12 +158,13 @@ func (b *Bot) Start() error {
 		return err
 	}
 
-	log.Println("Adding commands...")
+	slog.Info("Adding commands...")
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(b.commands))
 	for i, v := range b.commands {
 		cmd, err := b.session.ApplicationCommandCreate(b.session.State.User.ID, "", v)
 		if err != nil {
-			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
+			slog.Error("Cannot create command", "command", v.Name, "error", err)
+			return err
 		}
 		registeredCommands[i] = cmd
 	}
@@ -169,10 +173,10 @@ func (b *Bot) Start() error {
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
-	log.Println("Press Ctrl+C to exit")
+	slog.Info("Press Ctrl+C to exit")
 	<-stop
 
-	log.Println("Removing commands...")
+	slog.Info("Removing commands...")
 	// // We need to fetch the commands, since deleting requires the command ID.
 	// // We are doing this from the returned commands on line 375, because using
 	// // this will delete all the commands, which might not be desirable, so we
@@ -185,11 +189,32 @@ func (b *Bot) Start() error {
 	for _, v := range registeredCommands {
 		err = b.session.ApplicationCommandDelete(b.session.State.User.ID, "", v.ID)
 		if err != nil {
-			log.Panicf("Cannot delete '%v' command: %v", v.Name, err)
+			slog.Error("Cannot delete command", "command", v.Name, "error", err)
+			return err
 		}
 	}
 
-	log.Println("Gracefully shutting down.")
+	slog.Info("Gracefully shutting down.")
 
 	return nil
+}
+
+func (b *Bot) SendMessage(s *discordgo.Session, i *discordgo.InteractionCreate, msg string) error {
+	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: msg,
+		},
+	})
+}
+
+func WithErrorLogging(f func(*discordgo.Session, *discordgo.InteractionCreate) error) InteractionFunction {
+	wrapFunc := func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		userID := i.Member.User.ID
+		err := f(s, i)
+		if err != nil {
+			slog.Error("failed to report error to user", "error", err, "user", userID)
+		}
+	}
+	return wrapFunc
 }
