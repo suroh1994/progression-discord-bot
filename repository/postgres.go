@@ -63,6 +63,36 @@ func (p *postgresDataStore) StoreCards(userID string, cards []Card) error {
 	return nil
 }
 
+func (p *postgresDataStore) DropPlayer(userID string) error {
+	const errMsg = "failed to drop player: %w"
+
+	err := p.db.Transaction(func(tx *gorm.DB) error {
+		// Delete player's card pool first to avoid foreign key violations if they exist
+		if err := tx.Exec("DELETE FROM player_card_pool WHERE id = ?", userID).Error; err != nil {
+			return err
+		}
+
+		// Now, delete the player
+		result := tx.Where("id = ?", userID).Delete(&Player{})
+		if result.Error != nil {
+			return result.Error
+		}
+
+		// If no rows were affected, the player was not in the league
+		if result.RowsAffected == 0 {
+			return ErrPlayerNotFound
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf(errMsg, err)
+	}
+
+	return nil
+}
+
 func generateRows(userID string, cards []Card) (string, []any) {
 	type CardAndCount struct {
 		Card

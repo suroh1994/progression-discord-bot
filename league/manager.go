@@ -152,3 +152,40 @@ func (m *Manager) GetPlayerBalance(userID string) (repository.Player, error) {
 
 	return player, nil
 }
+
+func (m *Manager) DropPlayer(userID string) error {
+	const errMsg = "failed to drop player: %w"
+
+	_, err := m.dataStore.GetPlayer(userID)
+	if err != nil {
+		return fmt.Errorf(errMsg, err)
+	}
+
+	pairing, err := m.dataStore.GetPairing(userID)
+	if err != nil && !errors.Is(err, repository.ErrPairingNotFound) {
+		return fmt.Errorf(errMsg, err)
+	}
+
+	if err == nil && !isMatchReported(pairing) {
+		if pairing.Player1 == userID {
+			pairing.Wins1 = 0
+			pairing.Wins2 = 2
+		} else {
+			pairing.Wins1 = 2
+			pairing.Wins2 = 0
+		}
+		pairing.Draws = 0
+
+		err = m.dataStore.UpdatePairing(pairing)
+		if err != nil {
+			return fmt.Errorf(errMsg, err)
+		}
+	}
+
+	err = m.dataStore.DropPlayer(userID)
+	if err != nil {
+		return fmt.Errorf(errMsg, err)
+	}
+
+	return nil
+}
