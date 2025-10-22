@@ -16,6 +16,27 @@ func (b *Bot) HelpCommand(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	return b.SendMessage(s, i, message)
 }
 
+func (b *Bot) DropCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+	userID := i.Member.User.ID
+
+	var message string
+	err := b.leagueManager.DropPlayer(userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, repository.ErrPlayerNotFound):
+			message = "You are not part of the current league."
+		case errors.Is(err, league.ErrPlayerAlreadyDropped):
+			message = "You have already dropped from the league."
+		default:
+			message = "Error dropping from the league: " + err.Error()
+		}
+	} else {
+		message = "You have been successfully removed from the league."
+	}
+
+	return b.SendMessage(s, i, message)
+}
+
 func (b *Bot) BalanceCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	userID := i.Member.User.ID
 	var message string

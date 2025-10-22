@@ -63,6 +63,21 @@ func (p *postgresDataStore) StoreCards(userID string, cards []Card) error {
 	return nil
 }
 
+func (p *postgresDataStore) DropPlayer(userID string) error {
+	const errMsg = "failed to drop player: %w"
+
+	result := p.db.Table("player").Where("id = ?", userID).Update("dropped", true)
+	if result.Error != nil {
+		return fmt.Errorf(errMsg, result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return ErrPlayerNotFound
+	}
+
+	return nil
+}
+
 func generateRows(userID string, cards []Card) (string, []any) {
 	type CardAndCount struct {
 		Card
@@ -113,7 +128,7 @@ func (p *postgresDataStore) GetAllPlayers() ([]Player, error) {
 	const errMsg = "failed to get players: %w"
 
 	var players []Player
-	result := p.db.Table("player").Scan(&players)
+	result := p.db.Table("player").Where("dropped = false").Scan(&players)
 	if result.Error != nil {
 		return nil, fmt.Errorf(errMsg, result.Error)
 	}

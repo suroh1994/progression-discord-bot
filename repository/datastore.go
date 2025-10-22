@@ -12,6 +12,7 @@ type DataStore interface {
 	GetAllPlayers() ([]Player, error)
 	GetPlayer(userID string) (Player, error)
 	UpdatePlayer(player Player) error
+	DropPlayer(userID string) error
 	GetPairing(userID string) (Pairing, error)
 	StorePairings(pairings []Pairing) error
 	UpdatePairing(pairing Pairing) error
