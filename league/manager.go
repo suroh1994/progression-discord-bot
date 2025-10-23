@@ -22,8 +22,16 @@ func NewLeagueManager(dataStore repository.DataStore) *Manager {
 func (m *Manager) JoinLeague(userID string) error {
 	const errMsg = "failed to join league: %w"
 
-	_, err := m.dataStore.GetPlayer(userID)
+	player, err := m.dataStore.GetPlayer(userID)
 	if err == nil {
+		if player.Dropped {
+			player.Dropped = false
+			err = m.dataStore.UpdatePlayer(player)
+			if err != nil {
+				return fmt.Errorf(errMsg, err)
+			}
+			return nil
+		}
 		return fmt.Errorf(errMsg, ErrPlayerAlreadyJoined)
 	}
 
@@ -156,9 +164,13 @@ func (m *Manager) GetPlayerBalance(userID string) (repository.Player, error) {
 func (m *Manager) DropPlayer(userID string) error {
 	const errMsg = "failed to drop player: %w"
 
-	_, err := m.dataStore.GetPlayer(userID)
+	player, err := m.dataStore.GetPlayer(userID)
 	if err != nil {
 		return fmt.Errorf(errMsg, err)
+	}
+
+	if player.Dropped {
+		return ErrPlayerAlreadyDropped
 	}
 
 	pairing, err := m.dataStore.GetPairing(userID)

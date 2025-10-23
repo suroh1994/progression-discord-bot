@@ -66,28 +66,13 @@ func (p *postgresDataStore) StoreCards(userID string, cards []Card) error {
 func (p *postgresDataStore) DropPlayer(userID string) error {
 	const errMsg = "failed to drop player: %w"
 
-	err := p.db.Transaction(func(tx *gorm.DB) error {
-		// Delete player's card pool first to avoid foreign key violations if they exist
-		if err := tx.Exec("DELETE FROM player_card_pool WHERE id = ?", userID).Error; err != nil {
-			return err
-		}
+	result := p.db.Table("player").Where("id = ?", userID).Update("dropped", true)
+	if result.Error != nil {
+		return fmt.Errorf(errMsg, result.Error)
+	}
 
-		// Now, delete the player
-		result := tx.Where("id = ?", userID).Delete(&Player{})
-		if result.Error != nil {
-			return result.Error
-		}
-
-		// If no rows were affected, the player was not in the league
-		if result.RowsAffected == 0 {
-			return ErrPlayerNotFound
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return fmt.Errorf(errMsg, err)
+	if result.RowsAffected == 0 {
+		return ErrPlayerNotFound
 	}
 
 	return nil
@@ -143,7 +128,7 @@ func (p *postgresDataStore) GetAllPlayers() ([]Player, error) {
 	const errMsg = "failed to get players: %w"
 
 	var players []Player
-	result := p.db.Table("player").Scan(&players)
+	result := p.db.Table("player").Where("dropped = false").Scan(&players)
 	if result.Error != nil {
 		return nil, fmt.Errorf(errMsg, result.Error)
 	}

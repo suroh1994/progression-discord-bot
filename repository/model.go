@@ -5,6 +5,7 @@ type Player struct {
 	Id        string
 	WildCards int `gorm:"column:wild_card_count"`
 	WildPacks int `gorm:"column:wild_pack_count"`
+	Dropped   bool
 }
 
 // Card represents a card in a players card pool.
