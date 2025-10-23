@@ -16,6 +16,70 @@ func (b *Bot) HelpCommand(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	return b.SendMessage(s, i, message)
 }
 
+func (b *Bot) BansCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+	var message string
+	bans, err := b.leagueManager.GetBannedCards()
+	if err != nil {
+		message = "Error getting banned cards: " + err.Error()
+	} else {
+		if len(bans) == 0 {
+			message = "There are no banned cards."
+		} else {
+			var builder strings.Builder
+			builder.WriteString("```\n")
+			for _, ban := range bans {
+				builder.WriteString(fmt.Sprintf("%s\n", ban.CardName))
+			}
+			builder.WriteString("```")
+			message = builder.String()
+		}
+	}
+
+	return b.SendMessage(s, i, message)
+}
+
+func (b *Bot) BanCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+	userID := i.Member.User.ID
+	commandData := i.ApplicationCommandData()
+	cardName := commandData.Options[0].StringValue()
+
+	var message string
+	err := b.leagueManager.BanCard(userID, cardName)
+	if err != nil {
+		switch {
+		case errors.Is(err, league.ErrPlayerNotAdmin):
+			message = "You are not an admin."
+		default:
+			message = "Error banning card: " + err.Error()
+		}
+	} else {
+		message = fmt.Sprintf("Banned %s.", cardName)
+	}
+
+	return b.SendMessage(s, i, message)
+}
+
+func (b *Bot) UnbanCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+	userID := i.Member.User.ID
+	commandData := i.ApplicationCommandData()
+	cardName := commandData.Options[0].StringValue()
+
+	var message string
+	err := b.leagueManager.UnbanCard(userID, cardName)
+	if err != nil {
+		switch {
+		case errors.Is(err, league.ErrPlayerNotAdmin):
+			message = "You are not an admin."
+		default:
+			message = "Error unbanning card: " + err.Error()
+		}
+	} else {
+		message = fmt.Sprintf("Unbanned %s.", cardName)
+	}
+
+	return b.SendMessage(s, i, message)
+}
+
 func (b *Bot) DropCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	userID := i.Member.User.ID
 

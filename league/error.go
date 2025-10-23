@@ -13,3 +13,6 @@ var ErrInvalidMatchResult = errors.New("invalid match result")
 
 // ErrPlayerAlreadyDropped is returned when a player attempts to drop from a league, which they have already dropped from.
 var ErrPlayerAlreadyDropped = errors.New("player already dropped from the league")
+
+// ErrPlayerNotAdmin is returned when a player attempts to perform an admin-only action.
+var ErrPlayerNotAdmin = errors.New("player is not an admin")
