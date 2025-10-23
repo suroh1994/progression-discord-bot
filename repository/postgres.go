@@ -63,6 +63,40 @@ func (p *postgresDataStore) StoreCards(userID string, cards []Card) error {
 	return nil
 }
 
+func (p *postgresDataStore) GetBannedCards() ([]Ban, error) {
+	const errMsg = "failed to get banned cards: %w"
+
+	var bans []Ban
+	result := p.db.Table("bans").Find(&bans)
+	if result.Error != nil {
+		return nil, fmt.Errorf(errMsg, result.Error)
+	}
+
+	return bans, nil
+}
+
+func (p *postgresDataStore) BanCard(cardName string) error {
+	const errMsg = "failed to ban card: %w"
+
+	result := p.db.Table("bans").Create(&Ban{CardName: cardName})
+	if result.Error != nil {
+		return fmt.Errorf(errMsg, result.Error)
+	}
+
+	return nil
+}
+
+func (p *postgresDataStore) UnbanCard(cardName string) error {
+	const errMsg = "failed to unban card: %w"
+
+	result := p.db.Table("bans").Where("card_name = ?", cardName).Delete(&Ban{})
+	if result.Error != nil {
+		return fmt.Errorf(errMsg, result.Error)
+	}
+
+	return nil
+}
+
 func (p *postgresDataStore) DropPlayer(userID string) error {
 	const errMsg = "failed to drop player: %w"
 

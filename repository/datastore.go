@@ -18,4 +18,7 @@ type DataStore interface {
 	UpdatePairing(pairing Pairing) error
 	IsAdmin(userID string) (bool, error)
 	MakeAdmin(userID string) error
+	GetBannedCards() ([]Ban, error)
+	BanCard(cardName string) error
+	UnbanCard(cardName string) error
 }

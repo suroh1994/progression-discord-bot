@@ -83,6 +83,34 @@ func generateCommands() []*discordgo.ApplicationCommand {
 			},
 		},
 		{
+			Name:        "bans",
+			Description: "Get a list of all banned cards.",
+		},
+		{
+			Name:        "ban",
+			Description: "Ban a card.",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "card_name",
+					Description: "The name of the card to ban.",
+					Required:    true,
+				},
+			},
+		},
+		{
+			Name:        "unban",
+			Description: "Unban a card.",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "card_name",
+					Description: "The name of the card to unban.",
+					Required:    true,
+				},
+			},
+		},
+		{
 			Name:        "start",
 			Description: "Start a new league.",
 			Options: []*discordgo.ApplicationCommandOption{
@@ -149,6 +177,9 @@ func generateCommandHandlerMap(bot *Bot) map[string]InteractionFunction {
 		"pool":    WithErrorLogging(bot.PoolCommand),
 		"balance": WithErrorLogging(bot.BalanceCommand),
 		"report":  WithErrorLogging(bot.ReportCommand),
+		"bans":    WithErrorLogging(bot.BansCommand),
+		"ban":     WithErrorLogging(bot.BanCommand),
+		"unban":   WithErrorLogging(bot.UnbanCommand),
 	}
 	return commandHandlers
 }

@@ -1,0 +1,3 @@
+CREATE TABLE IF NOT EXISTS bans (
+    card_name VARCHAR(255) PRIMARY KEY
+);

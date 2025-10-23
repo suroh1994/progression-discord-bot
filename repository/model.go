@@ -25,3 +25,8 @@ type Pairing struct {
 	Wins2   int
 	Draws   int
 }
+
+// Ban represents a banned card.
+type Ban struct {
+	CardName string `gorm:"primaryKey"`
+}

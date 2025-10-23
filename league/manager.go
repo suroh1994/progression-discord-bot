@@ -51,6 +51,57 @@ func (m *Manager) JoinLeague(userID string) error {
 	return nil
 }
 
+func (m *Manager) GetBannedCards() ([]repository.Ban, error) {
+	const errMsg = "failed to get banned cards: %w"
+
+	bans, err := m.dataStore.GetBannedCards()
+	if err != nil {
+		return nil, fmt.Errorf(errMsg, err)
+	}
+
+	return bans, nil
+}
+
+func (m *Manager) BanCard(userID, cardName string) error {
+	const errMsg = "failed to ban card: %w"
+
+	isAdmin, err := m.dataStore.IsAdmin(userID)
+	if err != nil {
+		return fmt.Errorf(errMsg, err)
+	}
+
+	if !isAdmin {
+		return ErrPlayerNotAdmin
+	}
+
+	err = m.dataStore.BanCard(cardName)
+	if err != nil {
+		return fmt.Errorf(errMsg, err)
+	}
+
+	return nil
+}
+
+func (m *Manager) UnbanCard(userID, cardName string) error {
+	const errMsg = "failed to unban card: %w"
+
+	isAdmin, err := m.dataStore.IsAdmin(userID)
+	if err != nil {
+		return fmt.Errorf(errMsg, err)
+	}
+
+	if !isAdmin {
+		return ErrPlayerNotAdmin
+	}
+
+	err = m.dataStore.UnbanCard(cardName)
+	if err != nil {
+		return fmt.Errorf(errMsg, err)
+	}
+
+	return nil
+}
+
 func (m *Manager) ReportMatch(userID string, wins, losses, draws int) error {
 	const errMsg = "failed to report match: %w"
 
