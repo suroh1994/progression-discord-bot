@@ -2,5 +2,6 @@ CREATE TABLE player (
       id                varchar(36) NOT NULL,
       wild_card_count   int         NOT NULL,
       wild_pack_count   int         NOT NULL,
+      dropped           boolean     NOT NULL DEFAULT false,
       PRIMARY KEY (id)
 );
