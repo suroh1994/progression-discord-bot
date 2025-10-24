@@ -21,4 +21,5 @@ type DataStore interface {
 	GetBannedCards() ([]Ban, error)
 	BanCard(cardName string) error
 	UnbanCard(cardName string) error
+	GetSets() ([]Set, error)
 }

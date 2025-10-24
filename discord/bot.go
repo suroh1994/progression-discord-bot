@@ -87,6 +87,10 @@ func generateCommands() []*discordgo.ApplicationCommand {
 			Description: "Get a list of all banned cards.",
 		},
 		{
+			Name:        "sets",
+			Description: "Get a list of all unlocked sets.",
+		},
+		{
 			Name:        "ban",
 			Description: "Ban a card.",
 			Options: []*discordgo.ApplicationCommandOption{
@@ -178,6 +182,7 @@ func generateCommandHandlerMap(bot *Bot) map[string]InteractionFunction {
 		"balance": WithErrorLogging(bot.BalanceCommand),
 		"report":  WithErrorLogging(bot.ReportCommand),
 		"bans":    WithErrorLogging(bot.BansCommand),
+		"sets":    WithErrorLogging(bot.SetsCommand),
 		"ban":     WithErrorLogging(bot.BanCommand),
 		"unban":   WithErrorLogging(bot.UnbanCommand),
 	}
