@@ -63,6 +63,18 @@ func (p *postgresDataStore) StoreCards(userID string, cards []Card) error {
 	return nil
 }
 
+func (p *postgresDataStore) GetSets() ([]Set, error) {
+	const errMsg = "failed to get sets: %w"
+
+	var sets []Set
+	result := p.db.Table("sets").Find(&sets)
+	if result.Error != nil {
+		return nil, fmt.Errorf(errMsg, result.Error)
+	}
+
+	return sets, nil
+}
+
 func (p *postgresDataStore) GetBannedCards() ([]Ban, error) {
 	const errMsg = "failed to get banned cards: %w"
 

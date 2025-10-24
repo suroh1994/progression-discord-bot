@@ -51,6 +51,17 @@ func (m *Manager) JoinLeague(userID string) error {
 	return nil
 }
 
+func (m *Manager) GetSets() ([]repository.Set, error) {
+	const errMsg = "failed to get sets: %w"
+
+	sets, err := m.dataStore.GetSets()
+	if err != nil {
+		return nil, fmt.Errorf(errMsg, err)
+	}
+
+	return sets, nil
+}
+
 func (m *Manager) GetBannedCards() ([]repository.Ban, error) {
 	const errMsg = "failed to get banned cards: %w"
 

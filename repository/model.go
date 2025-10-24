@@ -30,3 +30,8 @@ type Pairing struct {
 type Ban struct {
 	CardName string `gorm:"primaryKey"`
 }
+
+// Set represents an unlocked set in the league.
+type Set struct {
+	SetCode string `gorm:"primaryKey"`
+}

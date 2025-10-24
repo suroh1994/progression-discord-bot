@@ -16,6 +16,28 @@ func (b *Bot) HelpCommand(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	return b.SendMessage(s, i, message)
 }
 
+func (b *Bot) SetsCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+	var message string
+	sets, err := b.leagueManager.GetSets()
+	if err != nil {
+		message = "Error getting sets: " + err.Error()
+	} else {
+		if len(sets) == 0 {
+			message = "There are no unlocked sets."
+		} else {
+			var builder strings.Builder
+			builder.WriteString("```\n")
+			for _, set := range sets {
+				builder.WriteString(fmt.Sprintf("%s\n", set.SetCode))
+			}
+			builder.WriteString("```")
+			message = builder.String()
+		}
+	}
+
+	return b.SendMessage(s, i, message)
+}
+
 func (b *Bot) BansCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	var message string
 	bans, err := b.leagueManager.GetBannedCards()
