@@ -51,6 +51,67 @@ func (m *Manager) JoinLeague(userID string) error {
 	return nil
 }
 
+func (m *Manager) RedeemPacks(userID, setCode string, count int) ([]repository.Card, error) {
+	const errMsg = "failed to redeem packs: %w"
+
+	tx, err := m.dataStore.WithTransaction()
+	if err != nil {
+		return nil, fmt.Errorf(errMsg, err)
+	}
+
+	player, err := tx.GetPlayer(userID)
+	if err != nil {
+		return nil, fmt.Errorf(errMsg, err)
+	}
+
+	if player.WildPacks < count {
+		return nil, fmt.Errorf(errMsg, ErrNotEnoughPacks)
+	}
+
+	sets, err := tx.GetSets()
+	if err != nil {
+		return nil, fmt.Errorf(errMsg, err)
+	}
+
+	setFound := false
+	for _, set := range sets {
+		if set.SetCode == setCode {
+			setFound = true
+			break
+		}
+	}
+	if !setFound {
+		return nil, fmt.Errorf(errMsg, repository.ErrSetNotFound)
+	}
+
+	cards, err := m.mbpgClient.GetPacks(setCode, count)
+	if err != nil {
+		return nil, fmt.Errorf(errMsg, err)
+	}
+	convertedCards := convertCardsFormat(cards)
+
+	err = tx.StoreCards(userID, convertedCards)
+	if err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf(errMsg, err)
+	}
+
+	player.WildPacks -= count
+	err = tx.UpdatePlayer(player)
+	if err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf(errMsg, err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf(errMsg, err)
+	}
+
+	return convertedCards, nil
+}
+
 func (m *Manager) GetSets() ([]repository.Set, error) {
 	const errMsg = "failed to get sets: %w"
 

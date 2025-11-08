@@ -185,6 +185,7 @@ func generateCommandHandlerMap(bot *Bot) map[string]InteractionFunction {
 		"sets":    WithErrorLogging(bot.SetsCommand),
 		"ban":     WithErrorLogging(bot.BanCommand),
 		"unban":   WithErrorLogging(bot.UnbanCommand),
+		"redeem":  WithErrorLogging(bot.RedeemPacksCommand),
 	}
 	return commandHandlers
 }
