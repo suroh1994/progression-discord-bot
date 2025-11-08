@@ -22,4 +22,7 @@ type DataStore interface {
 	BanCard(cardName string) error
 	UnbanCard(cardName string) error
 	GetSets() ([]Set, error)
+	WithTransaction() (DataStore, error)
+	Commit() error
+	Rollback() error
 }

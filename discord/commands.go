@@ -16,6 +16,36 @@ func (b *Bot) HelpCommand(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	return b.SendMessage(s, i, message)
 }
 
+func (b *Bot) RedeemPacksCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+	userID := i.Member.User.ID
+	commandData := i.ApplicationCommandData()
+	subCommand := commandData.Options[0]
+
+	var message string
+	if subCommand.Name == "pack" {
+		setCode := subCommand.Options[0].StringValue()
+		count := subCommand.Options[1].IntValue()
+
+		cards, err := b.leagueManager.RedeemPacks(userID, setCode, int(count))
+		if err != nil {
+			switch {
+			case errors.Is(err, league.ErrNotEnoughPacks):
+				message = "You don't have enough packs to redeem."
+			case errors.Is(err, repository.ErrSetNotFound):
+				message = fmt.Sprintf("Set %s not found.", setCode)
+			default:
+				message = "Error redeeming packs: " + err.Error()
+			}
+		} else {
+			message = "You have redeemed your packs and received the following cards:\n" + formatCardList(cards)
+		}
+	} else {
+		message = "Unknown subcommand. Please use one of the available subcommands."
+	}
+
+	return b.SendMessage(s, i, message)
+}
+
 func (b *Bot) SetsCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	var message string
 	sets, err := b.leagueManager.GetSets()

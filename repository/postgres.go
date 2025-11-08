@@ -16,6 +16,7 @@ type postgresDataStore struct {
 	password string
 	database string
 	db       *gorm.DB
+	tx       *gorm.DB
 }
 
 func NewPostgresDataStore(hostname string, port int, username string, password string, database string) DataStore {
@@ -26,6 +27,31 @@ func NewPostgresDataStore(hostname string, port int, username string, password s
 		password: password,
 		database: database,
 	}
+}
+
+func (p *postgresDataStore) WithTransaction() (DataStore, error) {
+	tx := p.db.Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	return &postgresDataStore{
+		hostname: p.hostname,
+		port:     p.port,
+		username: p.username,
+		password: p.password,
+		database: p.database,
+		db:       p.db,
+		tx:       tx,
+	}, nil
+}
+
+func (p *postgresDataStore) Commit() error {
+	return p.tx.Commit().Error
+}
+
+func (p *postgresDataStore) Rollback() error {
+	return p.tx.Rollback().Error
 }
 
 func (p *postgresDataStore) Connect() error {
@@ -46,6 +72,13 @@ func (p *postgresDataStore) generateDSN() string {
 		p.hostname, p.username, p.password, p.database, p.port, TZ)
 }
 
+func (p *postgresDataStore) getDB() *gorm.DB {
+	if p.tx != nil {
+		return p.tx
+	}
+	return p.db
+}
+
 func (p *postgresDataStore) StoreCards(userID string, cards []Card) error {
 	const errMsg = "failed to store cards: %w"
 	const query = `
@@ -54,7 +87,7 @@ func (p *postgresDataStore) StoreCards(userID string, cards []Card) error {
 			DO UPDATE SET count = EXCLUDED.count + player_card_pool.count`
 
 	fields, args := generateRows(userID, cards)
-	result := p.db.Exec(fmt.Sprintf(query, fields), args...)
+	result := p.getDB().Exec(fmt.Sprintf(query, fields), args...)
 
 	if result.Error != nil {
 		return fmt.Errorf(errMsg, result.Error)
@@ -67,7 +100,7 @@ func (p *postgresDataStore) GetSets() ([]Set, error) {
 	const errMsg = "failed to get sets: %w"
 
 	var sets []Set
-	result := p.db.Table("sets").Find(&sets)
+	result := p.getDB().Table("sets").Find(&sets)
 	if result.Error != nil {
 		return nil, fmt.Errorf(errMsg, result.Error)
 	}
@@ -79,7 +112,7 @@ func (p *postgresDataStore) GetBannedCards() ([]Ban, error) {
 	const errMsg = "failed to get banned cards: %w"
 
 	var bans []Ban
-	result := p.db.Table("bans").Find(&bans)
+	result := p.getDB().Table("bans").Find(&bans)
 	if result.Error != nil {
 		return nil, fmt.Errorf(errMsg, result.Error)
 	}
@@ -90,7 +123,7 @@ func (p *postgresDataStore) GetBannedCards() ([]Ban, error) {
 func (p *postgresDataStore) BanCard(cardName string) error {
 	const errMsg = "failed to ban card: %w"
 
-	result := p.db.Table("bans").Create(&Ban{CardName: cardName})
+	result := p.getDB().Table("bans").Create(&Ban{CardName: cardName})
 	if result.Error != nil {
 		return fmt.Errorf(errMsg, result.Error)
 	}
@@ -101,7 +134,7 @@ func (p *postgresDataStore) BanCard(cardName string) error {
 func (p *postgresDataStore) UnbanCard(cardName string) error {
 	const errMsg = "failed to unban card: %w"
 
-	result := p.db.Table("bans").Where("card_name = ?", cardName).Delete(&Ban{})
+	result := p.getDB().Table("bans").Where("card_name = ?", cardName).Delete(&Ban{})
 	if result.Error != nil {
 		return fmt.Errorf(errMsg, result.Error)
 	}
@@ -112,7 +145,7 @@ func (p *postgresDataStore) UnbanCard(cardName string) error {
 func (p *postgresDataStore) DropPlayer(userID string) error {
 	const errMsg = "failed to drop player: %w"
 
-	result := p.db.Table("player").Where("id = ?", userID).Update("dropped", true)
+	result := p.getDB().Table("player").Where("id = ?", userID).Update("dropped", true)
 	if result.Error != nil {
 		return fmt.Errorf(errMsg, result.Error)
 	}
@@ -160,7 +193,7 @@ func (p *postgresDataStore) GetCards(userID string) ([]Card, error) {
 	const errMsg = "failed to fetch cards: %w"
 
 	var cards []Card
-	result := p.db.Table("player_card_pool").
+	result := p.getDB().Table("player_card_pool").
 		Where("id = ?", userID).
 		Find(&cards)
 	if result.Error != nil {
@@ -174,7 +207,7 @@ func (p *postgresDataStore) GetAllPlayers() ([]Player, error) {
 	const errMsg = "failed to get players: %w"
 
 	var players []Player
-	result := p.db.Table("player").Where("dropped = false").Scan(&players)
+	result := p.getDB().Table("player").Where("dropped = false").Scan(&players)
 	if result.Error != nil {
 		return nil, fmt.Errorf(errMsg, result.Error)
 	}
@@ -186,7 +219,7 @@ func (p *postgresDataStore) GetPlayer(userID string) (Player, error) {
 	const errMsg = "failed to get player: %w"
 
 	var player Player
-	result := p.db.Table("player").First(&player, "id = ?", userID)
+	result := p.getDB().Table("player").First(&player, "id = ?", userID)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return Player{}, ErrPlayerNotFound
@@ -201,7 +234,7 @@ func (p *postgresDataStore) GetPlayer(userID string) (Player, error) {
 func (p *postgresDataStore) UpdatePlayer(player Player) error {
 	const errMsg = "failed to update player: %w"
 
-	result := p.db.Table("player").Save(&player)
+	result := p.getDB().Table("player").Save(&player)
 	if result.Error != nil {
 		return fmt.Errorf(errMsg, result.Error)
 	}
@@ -213,7 +246,7 @@ func (p *postgresDataStore) GetPairing(userID string) (Pairing, error) {
 	const errMsg = "failed to get pairing: %w"
 
 	var pairing Pairing
-	result := p.db.Table("pairing").
+	result := p.getDB().Table("pairing").
 		Where("player1 = ?", userID).
 		Or("player2 = ?", userID).
 		Find(&pairing)
@@ -231,7 +264,7 @@ func (p *postgresDataStore) GetPairing(userID string) (Pairing, error) {
 func (p *postgresDataStore) StorePairings(pairings []Pairing) error {
 	const errMsg = "failed to store pairings: %w"
 
-	result := p.db.Table("pairing").Create(&pairings)
+	result := p.getDB().Table("pairing").Create(&pairings)
 	if result.Error != nil {
 		return fmt.Errorf(errMsg, result.Error)
 	}
@@ -246,7 +279,7 @@ func (p *postgresDataStore) UpdatePairing(pairing Pairing) error {
                WHERE round = ? AND player1 = ? AND player2 = ?
                AND wins1 = 0 AND wins2 = 0 AND draws = 0`
 
-	result := p.db.Exec(query, pairing.Wins1, pairing.Wins2, pairing.Draws, pairing.Round, pairing.Player1, pairing.Player2)
+	result := p.getDB().Exec(query, pairing.Wins1, pairing.Wins2, pairing.Draws, pairing.Round, pairing.Player1, pairing.Player2)
 	if result.Error != nil {
 		return fmt.Errorf(errMsg, result.Error)
 	}
@@ -271,7 +304,7 @@ func (p *postgresDataStore) StartLeague() error {
 		return fmt.Errorf(errMsg, ErrLeagueAlreadyOngoing)
 	}
 
-	result := p.db.Exec(query)
+	result := p.getDB().Exec(query)
 	if result.Error != nil {
 		return fmt.Errorf(errMsg, result.Error)
 	}
@@ -288,7 +321,7 @@ func (p *postgresDataStore) EndLeague() error {
 		return fmt.Errorf(errMsg, err)
 	}
 
-	result := p.db.Exec(query)
+	result := p.getDB().Exec(query)
 	if result.Error != nil {
 		return fmt.Errorf(errMsg, result.Error)
 	}
@@ -305,7 +338,7 @@ func (p *postgresDataStore) GetRound() (int, error) {
 	const query = `SELECT round FROM league where active = true;`
 
 	var round int
-	result := p.db.Raw(query).Find(&round)
+	result := p.getDB().Raw(query).Find(&round)
 	if result.Error != nil {
 		return 0, fmt.Errorf(errMsg, result.Error)
 	}
@@ -321,7 +354,7 @@ func (p *postgresDataStore) IsAdmin(userID string) (bool, error) {
 	const errMsg = "failed to check admin permission: %w"
 
 	const query = `SELECT 1 FROM admin WHERE id = ?;`
-	result := p.db.Exec(query, userID)
+	result := p.getDB().Exec(query, userID)
 	if result.Error != nil {
 		return false, fmt.Errorf(errMsg, result.Error)
 	}
@@ -333,7 +366,7 @@ func (p *postgresDataStore) MakeAdmin(userID string) error {
 	const errMsg = "failed to check admin permission: %w"
 
 	const query = `INSERT INTO admin VALUES (?);`
-	result := p.db.Exec(query, userID)
+	result := p.getDB().Exec(query, userID)
 	if result.Error != nil {
 		return fmt.Errorf(errMsg, result.Error)
 	}

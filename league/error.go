@@ -16,3 +16,6 @@ var ErrPlayerAlreadyDropped = errors.New("player already dropped from the league
 
 // ErrPlayerNotAdmin is returned when a player attempts to perform an admin-only action.
 var ErrPlayerNotAdmin = errors.New("player is not an admin")
+
+// ErrNotEnoughPacks is returned when a player attempts to redeem more packs than they have.
+var ErrNotEnoughPacks = errors.New("not enough packs")
