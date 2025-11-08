@@ -32,6 +32,9 @@ func NewClient() (*Client, error) {
 	}, nil
 }
 
+// SearchCardInSets returns all cards that match the given cardname within the given sets.
+// TODO: the search query has a length limitation of 1000 charaters. To prevent errors or
+// incorrect responses in long running leagues, we should split the query in multiple.
 func (c *Client) SearchCardInSets(ctx context.Context, cardName string, sets []string, optionsModifiers ...SearchOptionsModifier) ([]sf.Card, error) {
 	options := c.defaultOptions
 	for _, modifier := range optionsModifiers {
@@ -54,7 +57,6 @@ func (c *Client) SearchCard(ctx context.Context, cardName string, optionsModifie
 }
 
 // generateSetRestriction generates a string containing all given sets, which can be appended to a search to limit the results to only valid sets.
-// TODO: the search query has a length limitation of 1000 charaters. To prevent errors for long leagues, we should return multiple strings if needed.
 func generateSetRestriction(sets []string) string {
 	if len(sets) == 0 {
 		return ""

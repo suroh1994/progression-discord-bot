@@ -90,11 +90,10 @@ The `/redeem` command has two different sub commands for redeeming individual ca
 Spend a wild card to add a specific card from the unlocked sets to your card pool.
 
 **Syntax:**
-`/redeem card <set_code> <collector_number>`
+`/redeem card <card_name>`
 
 **Arguments:**
-- `<set_code>' is a valid set code of an already unlocked set in the current league.
-- `<collector_number>' is the collector number of the card in the given set you want to add to your card pool.
+- `<card_name>' is the name of a card that has been printed in at least one already unlocked set in the current league.
 
 **Restriction:**
 
@@ -102,8 +101,7 @@ The command will fail if:
 - no league is ongoing
 - the user doesn't play in the current league
 - the user has no more wild cards
-- the given set code is not valid or not unlocked (yet) for the current league
-- the given collector number is not valid or does not exist in the given set
+- the given card name does not match any valid cards
 </details>
 
 <details>
